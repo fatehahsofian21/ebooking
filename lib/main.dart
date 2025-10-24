@@ -1,7 +1,7 @@
+import 'package:ebooking/dashboard.dart';
 import 'package:flutter/material.dart';
 
 // Define custom colors based on the design
-// You can adjust these hex codes to perfectly match your brand colors.
 const Color kPrimaryColorStart = Color(0xFF63B8FF); // Light Blue
 const Color kPrimaryColorEnd = Color(0xFF1E88E5);   // Slightly darker Blue
 const Color kWarningColor = Colors.red;
@@ -19,10 +19,8 @@ class PerkesoApp extends StatelessWidget {
     return MaterialApp(
       title: 'PERKESO eBooking System',
       theme: ThemeData(
-        // Set a light theme for the entire app
         brightness: Brightness.light,
         scaffoldBackgroundColor: kBackgroundColor,
-        // Define a text theme, especially for the large title
         textTheme: const TextTheme(
           displaySmall: TextStyle(
             fontSize: 28,
@@ -30,13 +28,11 @@ class PerkesoApp extends StatelessWidget {
             color: Color(0xFF333333), // Dark text color
           ),
         ),
-        // Style for input fields
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
           hintStyle: TextStyle(color: Colors.grey[600]),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 18.0, horizontal: 20.0),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 20.0),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
             borderSide: const BorderSide(color: Colors.grey, width: 1.0),
@@ -47,8 +43,7 @@ class PerkesoApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
-            borderSide:
-                const BorderSide(color: kPrimaryColorEnd, width: 2.0),
+            borderSide: const BorderSide(color: kPrimaryColorEnd, width: 2.0),
           ),
         ),
       ),
@@ -61,9 +56,13 @@ class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   // Dummy function for button press handlers
-  void _handlePress(String action) {
+  void _handlePress(String action, BuildContext context) {
     debugPrint('$action pressed');
-    // In a real app, you would implement navigation or API calls here.
+    // Navigate to Dashboard page on login success
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+    );
   }
 
   @override
@@ -79,7 +78,6 @@ class LoginPage extends StatelessWidget {
           CustomBackground(screenSize: screenSize),
 
           // 2. Main Content (Scrollable)
-          // Use SingleChildScrollView to prevent overflow on smaller screens
           SingleChildScrollView(
             child: SafeArea(
               child: Padding(
@@ -87,16 +85,14 @@ class LoginPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    // Spacer to position content correctly under the wave
                     SizedBox(height: screenSize.height * 0.20),
 
-                    // --- Logo and Title Section ---
+                    // Logo and Title Section
                     Center(
                       child: Column(
                         children: [
-                          // *** FIX APPLIED HERE ***
                           Image.asset(
-                            'assets/perkeso.png',
+                            'assets/perkeso.png', // Replace with your asset path
                             height: 100,
                             fit: BoxFit.contain,
                           ),
@@ -106,13 +102,11 @@ class LoginPage extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 32.0),
-
                     Text(
                       'eBooking System',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.displaySmall,
                     ),
-
                     const SizedBox(height: 48.0),
 
                     // --- Form Fields ---
@@ -134,7 +128,7 @@ class LoginPage extends StatelessWidget {
                     // --- Login Button ---
                     GradientButton(
                       text: 'Login',
-                      onPressed: () => _handlePress('Login'),
+                      onPressed: () => _handlePress('Login', context),
                       gradient: const LinearGradient(
                         colors: [kPrimaryColorStart, kPrimaryColorEnd],
                         begin: Alignment.centerLeft,
@@ -162,19 +156,13 @@ class LoginPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        BottomLink(
-                            text: 'Forgot password?',
-                            onPressed: () => _handlePress('Forgot password')),
-                        BottomLink(
-                            text: 'PDP Notice',
-                            onPressed: () => _handlePress('PDP Notice')),
+                        BottomLink(text: 'Forgot password?', onPressed: () {}),
+                        BottomLink(text: 'PDP Notice', onPressed: () {}),
                       ],
                     ),
                     const SizedBox(height: 15.0),
                     Center(
-                      child: BottomLink(
-                          text: 'Booking Conditions',
-                          onPressed: () => _handlePress('Booking Conditions')),
+                      child: BottomLink(text: 'Booking Conditions', onPressed: () {}),
                     ),
                     const SizedBox(height: 40.0),
                   ],
@@ -188,7 +176,6 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-// Custom widget for the gradient Login button
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -237,7 +224,6 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-// Custom widget for the hyperlinked text at the bottom
 class BottomLink extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -270,7 +256,6 @@ class BottomLink extends StatelessWidget {
   }
 }
 
-// CustomPainter to draw the wave-like background shape
 class CustomBackground extends StatelessWidget {
   final Size screenSize;
 
@@ -288,7 +273,6 @@ class CustomBackground extends StatelessWidget {
 class WavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Create a linear gradient for the background
     final gradient = LinearGradient(
       colors: [kPrimaryColorStart.withOpacity(0.9), kPrimaryColorEnd.withOpacity(0.8)],
       begin: Alignment.topCenter,
@@ -298,54 +282,21 @@ class WavePainter extends CustomPainter {
     final Paint paint = Paint()..shader = gradient;
 
     final path = Path();
-
-    // Start from the top left
     path.lineTo(0, size.height * 0.4);
-
-    // Wave 1: Curve 1
-    path.cubicTo(
-      size.width * 0.1,      // Control point x1
-      size.height * 0.25,     // Control point y1
-      size.width * 0.35,      // Control point x2
-      size.height * 0.6,      // Control point y2
-      size.width * 0.6,       // End point x
-      size.height * 0.4,      // End point y
-    );
-
-    // Wave 2: Curve 2
-    path.cubicTo(
-      size.width * 0.8,       // Control point x1
-      size.height * 0.2,      // Control point y1
-      size.width * 0.9,       // Control point x2
-      size.height * 0.5,      // Control point y2
-      size.width,             // End point x
-      size.height * 0.35,     // End point y
-    );
-
-    // Close the path to fill the area
+    path.cubicTo(size.width * 0.1, size.height * 0.25, size.width * 0.35, size.height * 0.6, size.width * 0.6, size.height * 0.4);
+    path.cubicTo(size.width * 0.8, size.height * 0.2, size.width * 0.9, size.height * 0.5, size.width, size.height * 0.35);
     path.lineTo(size.width, 0);
     path.close();
 
     canvas.drawPath(path, paint);
-    
-    // Add a secondary, slightly transparent wave layer for depth
+
     final secondaryPaint = Paint()
       ..color = Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.fill;
 
     final secondaryPath = Path();
     secondaryPath.lineTo(0, size.height * 0.3);
-    
-    // Secondary Wave Curve
-    secondaryPath.cubicTo(
-      size.width * 0.25,      // Control point x1
-      size.height * 0.45,     // Control point y1
-      size.width * 0.65,      // Control point x2
-      size.height * 0.1,      // Control point y2
-      size.width,             // End point x
-      size.height * 0.2,      // End point y
-    );
-
+    secondaryPath.cubicTo(size.width * 0.25, size.height * 0.45, size.width * 0.65, size.height * 0.1, size.width, size.height * 0.2);
     secondaryPath.lineTo(size.width, 0);
     secondaryPath.close();
 
