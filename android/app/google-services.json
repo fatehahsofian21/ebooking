@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1095938708487",
+    "project_id": "ebooking-7d84e",
+    "storage_bucket": "ebooking-7d84e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1095938708487:android:4f6a80c144b867c0ba86a2",
+        "android_client_info": {
+          "package_name": "com.example.ebooking"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoXMHJR6Bp3_D9eJTEUtrOyDRtuSiZ05Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

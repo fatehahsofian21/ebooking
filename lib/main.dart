@@ -1,49 +1,30 @@
 import 'package:ebooking/dashboard.dart';
 import 'package:flutter/material.dart';
 
-// Define custom colors based on the design
-const Color kPrimaryColorStart = Color(0xFF63B8FF); // Light Blue
-const Color kPrimaryColorEnd = Color(0xFF1E88E5);   // Slightly darker Blue
+// Match same color style as DashboardScreen
+const Color kPrimaryColorStart = Color(0xFFAED7FF); // soft light blue
+const Color kPrimaryColorEnd = Color(0xFFD6D6D6);   // light grey
 const Color kWarningColor = Colors.red;
-const Color kBackgroundColor = Color(0xFFF7F9FC);
 
 void main() {
-  runApp(const PerkesoApp());
+  runApp(const IBookingApp());
 }
 
-class PerkesoApp extends StatelessWidget {
-  const PerkesoApp({super.key});
+class IBookingApp extends StatelessWidget {
+  const IBookingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PERKESO eBooking System',
+      title: 'PERKESO iBooking',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: kBackgroundColor,
         textTheme: const TextTheme(
           displaySmall: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF333333), // Dark text color
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          hintStyle: TextStyle(color: Colors.grey[600]),
-          contentPadding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 20.0),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Colors.grey, width: 1.0),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Color(0xFFDDDDDD), width: 1.0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: kPrimaryColorEnd, width: 2.0),
+            color: Color(0xFF333333),
           ),
         ),
       ),
@@ -52,130 +33,203 @@ class PerkesoApp extends StatelessWidget {
   }
 }
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
-  // Dummy function for button press handlers
-  void _handlePress(String action, BuildContext context) {
-    debugPrint('$action pressed');
-    // Navigate to Dashboard page on login success
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const DashboardScreen()),
-    );
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  String? errorMessage;
+
+  // Dummy credentials
+  final String correctEmail = "fatehah.sofian@perkeso.gov.my";
+  final String correctPassword = "fatehah2102_";
+
+  void _handleLogin(BuildContext context) {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email == correctEmail && password == correctPassword) {
+      setState(() => errorMessage = null);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    } else {
+      setState(() {
+        errorMessage = "Email or password entered is incorrect.";
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Determine screen size for responsive layout adjustments
-    final Size screenSize = MediaQuery.of(context).size;
-
     return Scaffold(
-      // Use Stack to layer the custom background and the content
-      body: Stack(
-        children: <Widget>[
-          // 1. Custom Wave Background
-          CustomBackground(screenSize: screenSize),
-
-          // 2. Main Content (Scrollable)
-          SingleChildScrollView(
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    SizedBox(height: screenSize.height * 0.20),
-
-                    // Logo and Title Section
-                    Center(
-                      child: Column(
-                        children: [
-                          Image.asset(
-                            'assets/perkeso.png', // Replace with your asset path
-                            height: 100,
-                            fit: BoxFit.contain,
+      // Full gradient background
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kPrimaryColorStart, Color.fromARGB(255, 123, 166, 184)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // Logo and Title Section
+                  Center(
+                    child: Column(
+                      children: [
+                        Image.asset(
+                          'assets/perkeso.png',
+                          height: 90,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(height: 1.0),
+                        const Text(
+                          'iBooking',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF333333),
                           ),
-                          const SizedBox(height: 8.0),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40.0),
+
+                  // Email field
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'Email',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 18.0),
 
-                    const SizedBox(height: 32.0),
-                    Text(
-                      'eBooking System',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                    const SizedBox(height: 48.0),
-
-                    // --- Form Fields ---
-                    const TextField(
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        hintText: 'Email',
+                  // Password field with eye icon
+                  TextField(
+                    controller: passwordController,
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'Password',
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
                       ),
                     ),
-                    const SizedBox(height: 20.0),
-                    const TextField(
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        hintText: 'Password',
-                      ),
-                    ),
-                    const SizedBox(height: 30.0),
+                  ),
 
-                    // --- Login Button ---
-                    GradientButton(
-                      text: 'Login',
-                      onPressed: () => _handlePress('Login', context),
-                      gradient: const LinearGradient(
-                        colors: [kPrimaryColorStart, kPrimaryColorEnd],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                    const SizedBox(height: 20.0),
+                  const SizedBox(height: 10.0),
 
-                    // --- Warning Text ---
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  // Error message
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        '**Please login to your account using PERKESO\'s E-mail Address and Password.',
+                        errorMessage!,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: kWarningColor,
-                          fontSize: 12.0,
                           fontWeight: FontWeight.w600,
+                          fontSize: 13.0,
                         ),
                       ),
                     ),
 
-                    // --- Bottom Links ---
-                    const SizedBox(height: 50.0),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        BottomLink(text: 'Forgot password?', onPressed: () {}),
-                        BottomLink(text: 'PDP Notice', onPressed: () {}),
-                      ],
+                  const SizedBox(height: 25.0),
+
+                  // Login Button
+                  GradientButton(
+                    text: 'Login',
+                    onPressed: () => _handleLogin(context),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF63B8FF), Color(0xFF1E88E5)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                     ),
-                    const SizedBox(height: 15.0),
-                    Center(
-                      child: BottomLink(text: 'Booking Conditions', onPressed: () {}),
+                  ),
+
+                  const SizedBox(height: 25.0),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      '**Please login using your PERKESO email address and password.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: kWarningColor,
+                        fontSize: 12.0,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 40.0),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 40.0),
+
+                  // Bottom links
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      BottomLink(text: 'Forgot password?', onPressed: () {}),
+                      BottomLink(text: 'PDP Notice', onPressed: () {}),
+                    ],
+                  ),
+                  const SizedBox(height: 12.0),
+                  Center(
+                    child: BottomLink(
+                      text: 'Booking Conditions',
+                      onPressed: () {},
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
+// Gradient Button
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -197,7 +251,7 @@ class GradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
         boxShadow: [
           BoxShadow(
-            color: kPrimaryColorEnd.withOpacity(0.3),
+            color: const Color(0xFF1E88E5).withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -224,6 +278,7 @@ class GradientButton extends StatelessWidget {
   }
 }
 
+// Bottom links
 class BottomLink extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -246,65 +301,12 @@ class BottomLink extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          color: kPrimaryColorEnd,
+          color: Color(0xFF1E88E5),
           decoration: TextDecoration.underline,
           fontWeight: FontWeight.w600,
           fontSize: 13.0,
         ),
       ),
     );
-  }
-}
-
-class CustomBackground extends StatelessWidget {
-  final Size screenSize;
-
-  const CustomBackground({super.key, required this.screenSize});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(screenSize.width, screenSize.height * 0.4),
-      painter: WavePainter(),
-    );
-  }
-}
-
-class WavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final gradient = LinearGradient(
-      colors: [kPrimaryColorStart.withOpacity(0.9), kPrimaryColorEnd.withOpacity(0.8)],
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final Paint paint = Paint()..shader = gradient;
-
-    final path = Path();
-    path.lineTo(0, size.height * 0.4);
-    path.cubicTo(size.width * 0.1, size.height * 0.25, size.width * 0.35, size.height * 0.6, size.width * 0.6, size.height * 0.4);
-    path.cubicTo(size.width * 0.8, size.height * 0.2, size.width * 0.9, size.height * 0.5, size.width, size.height * 0.35);
-    path.lineTo(size.width, 0);
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    final secondaryPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
-      ..style = PaintingStyle.fill;
-
-    final secondaryPath = Path();
-    secondaryPath.lineTo(0, size.height * 0.3);
-    secondaryPath.cubicTo(size.width * 0.25, size.height * 0.45, size.width * 0.65, size.height * 0.1, size.width, size.height * 0.2);
-    secondaryPath.lineTo(size.width, 0);
-    secondaryPath.close();
-
-    canvas.drawPath(secondaryPath, secondaryPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
   }
 }
