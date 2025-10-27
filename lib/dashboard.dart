@@ -1,12 +1,10 @@
+import 'package:ebooking/Vcalendar';
 import 'package:flutter/material.dart';
-import 'main.dart';     // for logout navigation
-import 'booking.dart';  // for booking page navigation
 import 'package:flutter/services.dart';
+import 'main.dart';
 
-
-// Updated gradient colors (light blue + grey)
-const Color kPrimaryColorStart = Color(0xFFAED7FF); // soft light blue
-const Color kPrimaryColorEnd   = Color(0xFFD6D6D6); // light grey
+const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
+const Color kAccentColor = Color(0xFF63B8FF);
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -37,7 +35,6 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        // Makes status bar transparent & hides system inset
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
@@ -45,25 +42,15 @@ class DashboardScreen extends StatelessWidget {
         child: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kPrimaryColorStart, Color.fromARGB(255, 123, 166, 184)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
+          color: kPrimaryColor,
           child: Stack(
             children: [
-              // ===== Full header image with caret shape (^)
+              // ===== Straight header image =====
               SizedBox(
                 width: double.infinity,
-                height: 350,
+                height: 280,
                 child: ClipPath(
-                  clipper: _CaretHeaderClipper(
-                    leftDrop: 0.72,
-                    rightDrop: 0.70,
-                    peak: 0.50, // slightly lower and soft
-                  ),
+                  clipper: _StraightHeaderClipper(),
                   child: Image.asset(
                     'assets/bangunan.jpg',
                     fit: BoxFit.cover,
@@ -72,47 +59,43 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // Logout icon (no background, just pop-out shadow)
+              // ===== Logout button =====
               Positioned(
-                top: 25, // still visible after status bar removed
+                top: 25,
                 right: 16,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.power_settings_new,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    tooltip: 'Log out',
-                    onPressed: () => _confirmLogout(context),
-                    style: IconButton.styleFrom(
-                      shadowColor: Colors.black.withOpacity(0.5),
-                      elevation: 12,
-                      backgroundColor: Colors.transparent,
-                    ),
+                child: IconButton(
+                  icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
+                  tooltip: 'Log out',
+                  onPressed: () => _confirmLogout(context),
+                  style: IconButton.styleFrom(
+                    shadowColor: Colors.white.withOpacity(0.4),
+                    elevation: 10,
+                    backgroundColor: Colors.transparent,
                   ),
                 ),
               ),
 
-              // ===== Main content =====
+              // ===== Profile picture overlapping header line =====
+              Positioned(
+                top: 240,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Colors.white,
+                    backgroundImage: const AssetImage('assets/profile.png'),
+                  ),
+                ),
+              ),
+
+              // ===== Content below =====
               Align(
                 alignment: Alignment.topCenter,
                 child: Column(
                   children: [
-                    const SizedBox(height: 140),
+                    const SizedBox(height: 340),
 
-                    // Profile avatar
-                    const CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, size: 70, color: Color(0xFF1E88E5)),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Name
                     const Text(
                       'Nor Fatehah Binti Sofian',
                       style: TextStyle(
@@ -123,8 +106,6 @@ class DashboardScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
-
-                    // Department
                     const Text(
                       'Bahagian Strategi dan Transformasi & ICT',
                       style: TextStyle(
@@ -135,35 +116,108 @@ class DashboardScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
 
-                    const SizedBox(height: 56),
+                    const SizedBox(height: 45),
 
-                    // Two main buttons
+                    // ===== Buttons =====
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
+                          // Meeting Room button - no action yet
                           _DashboardButton(
                             icon: Icons.meeting_room,
                             label: 'Meeting Room',
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const BookingPage()),
-                              );
+                              // No action yet
                             },
                           ),
+                          // Vehicle button - navigate to VCalendar
                           _DashboardButton(
                             icon: Icons.directions_car_filled,
                             label: 'Vehicle',
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const BookingPage()),
+                                MaterialPageRoute(builder: (_) => const VCalendarPage()),
                               );
                             },
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 85),
+
+                    // ===== Upcoming Booking =====
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Upcoming Booking',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                            width: 0.7,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.directions_car, color: Colors.white, size: 26),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    'Toyota Vellfire',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    '30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
@@ -179,31 +233,15 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-/// Caret (^) header clipper with gentle, soft center
-class _CaretHeaderClipper extends CustomClipper<Path> {
-  final double leftDrop;
-  final double rightDrop;
-  final double peak;
-
-  _CaretHeaderClipper({
-    this.leftDrop = 0.72,
-    this.rightDrop = 0.70,
-    this.peak = 0.50,
-  });
-
+// Straight header clipper
+class _StraightHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-
     final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(0, h * leftDrop)
-      ..quadraticBezierTo(w * 0.25, h * (leftDrop + peak) / 2, w * 0.5, h * peak)
-      ..quadraticBezierTo(w * 0.75, h * (rightDrop + peak) / 2, w, h * rightDrop)
-      ..lineTo(w, 0)
+      ..lineTo(0, size.height)
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width, 0)
       ..close();
-
     return path;
   }
 
@@ -211,7 +249,7 @@ class _CaretHeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-/// Button style (Meeting Room / Vehicle)
+// Dashboard button widget
 class _DashboardButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -230,28 +268,28 @@ class _DashboardButton extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 90,
-            width: 90,
+            height: 85,
+            width: 85,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.25), width: 0.8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Icon(icon, size: 42, color: Colors.white),
+            child: Icon(icon, size: 40, color: Colors.white),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 15.5,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
           ),

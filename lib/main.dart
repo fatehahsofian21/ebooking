@@ -1,9 +1,9 @@
 import 'package:ebooking/dashboard.dart';
 import 'package:flutter/material.dart';
 
-// Match same color style as DashboardScreen
-const Color kPrimaryColorStart = Color(0xFFAED7FF); // soft light blue
-const Color kPrimaryColorEnd = Color(0xFFD6D6D6);   // light grey
+// Solid dark blue theme
+const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
+const Color kAccentColor = Color(0xFF63B8FF);  // Light blue accent
 const Color kWarningColor = Colors.red;
 
 void main() {
@@ -24,7 +24,7 @@ class IBookingApp extends StatelessWidget {
           displaySmall: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF333333),
+            color: Colors.white,
           ),
         ),
       ),
@@ -67,20 +67,33 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  InputDecoration _transparentFieldDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white70),
+      filled: false, // transparent
+      fillColor: Colors.transparent,
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.55), width: 1.2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: const BorderSide(color: Colors.white, width: 1.8),
+      ),
+      // subtle drop shadow on focus via container below (optional)
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Full gradient background
+      // Solid dark blue background
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [kPrimaryColorStart, Color.fromARGB(255, 123, 166, 184)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: kPrimaryColor,
         child: Center(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -99,54 +112,44 @@ class _LoginPageState extends State<LoginPage> {
                           height: 90,
                           fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 1.0),
+                        const SizedBox(height: 8.0),
                         const Text(
                           'iBooking',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF333333),
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 40.0),
+                  const SizedBox(height: 36.0),
 
-                  // Email field
+                  // Email field (transparent)
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: 'Email',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                      ),
-                    ),
+                    style: const TextStyle(color: Colors.white),
+                    cursorColor: Colors.white,
+                    decoration: _transparentFieldDecoration('Email'),
                   ),
-                  const SizedBox(height: 18.0),
 
-                  // Password field with eye icon
+                  const SizedBox(height: 16.0),
+
+                  // Password field (transparent) + eye
                   TextField(
                     controller: passwordController,
                     obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: 'Password',
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                      ),
+                    style: const TextStyle(color: Colors.white),
+                    cursorColor: Colors.white,
+                    decoration: _transparentFieldDecoration('Password').copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Colors.grey,
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.white70,
                         ),
                         onPressed: () {
                           setState(() {
@@ -157,12 +160,35 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 10.0),
+                  // Forgot password (right-aligned, directly under password)
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(1, 1),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          color: Colors.white,
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.0,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8.0),
 
                   // Error message
                   if (errorMessage != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 6.0, bottom: 6.0),
                       child: Text(
                         errorMessage!,
                         textAlign: TextAlign.center,
@@ -174,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                  const SizedBox(height: 25.0),
+                  const SizedBox(height: 18.0),
 
                   // Login Button
                   GradientButton(
@@ -187,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 25.0),
+                  const SizedBox(height: 22.0),
 
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
@@ -195,30 +221,14 @@ class _LoginPageState extends State<LoginPage> {
                       '**Please login using your PERKESO email address and password.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: kWarningColor,
+                        color: Colors.white70,
                         fontSize: 12.0,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 40.0),
-
-                  // Bottom links
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      BottomLink(text: 'Forgot password?', onPressed: () {}),
-                      BottomLink(text: 'PDP Notice', onPressed: () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 12.0),
-                  Center(
-                    child: BottomLink(
-                      text: 'Booking Conditions',
-                      onPressed: () {},
-                    ),
-                  ),
+                  // Removed PDP Notice & Booking Conditions as requested
                 ],
               ),
             ),
@@ -229,7 +239,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// Gradient Button
+// Gradient Button (kept gradient for contrast)
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -251,9 +261,9 @@ class GradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E88E5).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -262,49 +272,16 @@ class GradientButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(10.0),
-          child: Center(
+          child: const Center(
             child: Text(
-              text,
-              style: const TextStyle(
+              'Login',
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// Bottom links
-class BottomLink extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-
-  const BottomLink({
-    super.key,
-    required this.text,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: EdgeInsets.zero,
-        minimumSize: const Size(1, 1),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF1E88E5),
-          decoration: TextDecoration.underline,
-          fontWeight: FontWeight.w600,
-          fontSize: 13.0,
         ),
       ),
     );
