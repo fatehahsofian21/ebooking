@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ibooking/dashboard.dart';
+import 'package:ibooking/myBooking.dart';  // Import MyBookingPage
 
 // Solid dark blue theme
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
@@ -29,6 +30,10 @@ class IBookingApp extends StatelessWidget {
         ),
       ),
       home: const LoginPage(),
+      routes: {
+        '/myBookingPage': (context) => MyBookingPage(),  // Register the route here
+        // You can add more routes if needed
+      },
     );
   }
 }
