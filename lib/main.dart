@@ -143,34 +143,21 @@ class _LoginPageState extends State<LoginPage> {
                     obscureText: !_isPasswordVisible, // Toggle password visibility
                     style: const TextStyle(color: Colors.white),
                     cursorColor: Colors.white,
-                    decoration: InputDecoration(
-                      hintText: "Password",
-                      hintStyle: const TextStyle(color: Colors.white70),
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.55), width: 1.2),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: const BorderSide(color: Colors.white, width: 1.8),
-                      ),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.all(8.0),  // Padding for the icon
-                        child: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.white,  // White icon for better visibility
-                            size: 30,  // Increased size for better visibility
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
-                            });
-                          },
+                    decoration: _transparentFieldDecoration('Password').copyWith(
+                      // Use IconButton directly as suffix and supply constraints so it appears reliably
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.white,
                         ),
+                        iconSize: 22,
+                        padding: const EdgeInsets.all(8.0),
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
+                          });
+                        },
                       ),
                     ),
                   ),

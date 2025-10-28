@@ -123,7 +123,7 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           // Meeting Room button - replaced with custom image
                           _DashboardButton(
-                            imagePath: 'assets/bilik.png',  // Custom image for meeting room
+                            iconData: Icons.meeting_room,
                             label: 'Meeting Room',
                             onTap: () {
                               // No action yet
@@ -131,7 +131,7 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           // Vehicle button - replaced with custom image
                           _DashboardButton(
-                            imagePath: 'assets/kereta.png',  // Custom image for vehicle
+                            iconData: Icons.directions_car,
                             label: 'Vehicle',
                             onTap: () {
                               Navigator.push(
@@ -189,11 +189,7 @@ class DashboardScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             // Replacing the vehicle icon with custom image
-                            Image.asset(
-                              'assets/kereta.png',  // Custom image for vehicle
-                              width: 32,  // Adjust the width of the image
-                              height: 32,  // Adjust the height of the image
-                            ),
+                            Icon(Icons.directions_car, size: 32, color: Colors.white),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -253,15 +249,18 @@ class _StraightHeaderClipper extends CustomClipper<Path> {
 
 // Dashboard button widget (updated to use images)
 class _DashboardButton extends StatelessWidget {
-  final String imagePath;
+  final String? imagePath;
+  final IconData? iconData;
   final String label;
   final VoidCallback onTap;
 
   const _DashboardButton({
-    required this.imagePath,
+    this.imagePath,
+    this.iconData,
     required this.label,
     required this.onTap,
-  });
+  }) : assert(imagePath != null || iconData != null,
+           'Either imagePath or iconData must be provided');
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +283,9 @@ class _DashboardButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Image.asset(imagePath, fit: BoxFit.cover), // Using custom image
+            child: (iconData != null)
+                ? Icon(iconData, size: 42, color: Colors.white)
+                : Image.asset(imagePath!, fit: BoxFit.cover), // Using custom image
           ),
           const SizedBox(height: 8),
           Text(
