@@ -1,6 +1,6 @@
-import 'package:ebooking/Vcalendar';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ibooking/Vcalendar';
 import 'main.dart';
 
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
@@ -89,13 +89,11 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // ===== Content below =====
-              Align(
-                alignment: Alignment.topCenter,
+              // ===== Scrollable Content Below =====
+              SingleChildScrollView(
                 child: Column(
                   children: [
                     const SizedBox(height: 340),
-
                     const Text(
                       'Nor Fatehah Binti Sofian',
                       style: TextStyle(
@@ -115,7 +113,6 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-
                     const SizedBox(height: 45),
 
                     // ===== Buttons =====
@@ -124,17 +121,17 @@ class DashboardScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Meeting Room button - no action yet
+                          // Meeting Room button - replaced with custom image
                           _DashboardButton(
-                            icon: Icons.meeting_room,
+                            imagePath: 'assets/bilik.png',  // Custom image for meeting room
                             label: 'Meeting Room',
                             onTap: () {
                               // No action yet
                             },
                           ),
-                          // Vehicle button - navigate to VCalendar
+                          // Vehicle button - replaced with custom image
                           _DashboardButton(
-                            icon: Icons.directions_car_filled,
+                            imagePath: 'assets/kereta.png',  // Custom image for vehicle
                             label: 'Vehicle',
                             onTap: () {
                               Navigator.push(
@@ -191,7 +188,12 @@ class DashboardScreen extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const Icon(Icons.directions_car, color: Colors.white, size: 26),
+                            // Replacing the vehicle icon with custom image
+                            Image.asset(
+                              'assets/kereta.png',  // Custom image for vehicle
+                              width: 32,  // Adjust the width of the image
+                              height: 32,  // Adjust the height of the image
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -221,7 +223,7 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const Expanded(child: SizedBox()),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -249,14 +251,14 @@ class _StraightHeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// Dashboard button widget
+// Dashboard button widget (updated to use images)
 class _DashboardButton extends StatelessWidget {
-  final IconData icon;
+  final String imagePath;
   final String label;
   final VoidCallback onTap;
 
   const _DashboardButton({
-    required this.icon,
+    required this.imagePath,
     required this.label,
     required this.onTap,
   });
@@ -282,7 +284,7 @@ class _DashboardButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, size: 40, color: Colors.white),
+            child: Image.asset(imagePath, fit: BoxFit.cover), // Using custom image
           ),
           const SizedBox(height: 8),
           Text(

@@ -1,5 +1,5 @@
-import 'package:ebooking/dashboard.dart';
 import 'package:flutter/material.dart';
+import 'package:ibooking/dashboard.dart';
 
 // Solid dark blue theme
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
@@ -82,14 +82,12 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(12.0),
         borderSide: const BorderSide(color: Colors.white, width: 1.8),
       ),
-      // subtle drop shadow on focus via container below (optional)
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Solid dark blue background
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -139,23 +137,40 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 16.0),
 
-                  // Password field (transparent) + eye
+                  // Password field (transparent) + eye icon
                   TextField(
                     controller: passwordController,
-                    obscureText: !_isPasswordVisible,
+                    obscureText: !_isPasswordVisible, // Toggle password visibility
                     style: const TextStyle(color: Colors.white),
                     cursorColor: Colors.white,
-                    decoration: _transparentFieldDecoration('Password').copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                          color: Colors.white70,
+                    decoration: InputDecoration(
+                      hintText: "Password",
+                      hintStyle: const TextStyle(color: Colors.white70),
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide(color: Colors.white.withOpacity(0.55), width: 1.2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: const BorderSide(color: Colors.white, width: 1.8),
+                      ),
+                      suffixIcon: Padding(
+                        padding: const EdgeInsets.all(8.0),  // Padding for the icon
+                        child: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,  // White icon for better visibility
+                            size: 30,  // Increased size for better visibility
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
                       ),
                     ),
                   ),
@@ -227,8 +242,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-
-                  // Removed PDP Notice & Booking Conditions as requested
                 ],
               ),
             ),
