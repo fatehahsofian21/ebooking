@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ibooking/Vbooking.dart';
+import 'package:ibooking/MyBooking.dart'; // Import your MyBooking.dart
 
 const Color kPrimaryDark = Color.fromARGB(255, 24, 42, 94); // dark blue
 const Color kApproved = Color(0xFF2ECC71); // green
@@ -51,11 +52,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
     return DateTime(_baseMonth.year, _baseMonth.month + offset, 1);
   }
 
-
-
   // Track selected date and its booking details
   DateTime? _selectedDate;
-  // For selected date show list of bookings
   List<Map<String, String>>? _bookingsForSelectedDate;
 
   // bottom navigation state
@@ -178,7 +176,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
                           // If it's a holiday with only that label, show single label
                           if (_bookingsForSelectedDate != null &&
                               _bookingsForSelectedDate!.length == 1 &&
-                              _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[
+                              _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[ 
                             Text(
                               'PUBLIC HOLIDAY',
                               style: const TextStyle(
@@ -234,7 +232,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
                                 ),
                               );
                             }).toList(),
-                          ] else ...[
+                          ] else ...[ 
                             // No booking message
                             Text('No bookings for this date', style: const TextStyle(color: Colors.black54)),
                           ],
@@ -264,12 +262,12 @@ class _VCalendarPageState extends State<VCalendarPage> {
             // Booked Vehicle - navigate to vehicle booking page
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
           } else if (i == 2) {
-            // My Booking - no action yet (placeholder)
+            // My Booking - navigate to MyBooking page
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyBookingPage())); // Navigate to MyBookingPage
           }
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: kPrimaryDark,
-        // Only show mustard when user explicitly clicked an item; otherwise remain white
         selectedItemColor: _hasUserSelectedBottomNav ? kPending : Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
@@ -281,7 +279,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
     );
   }
 
-  // ----- Pieces -----
+  // ----- Pieces ----- 
   Widget _monthHeader(DateTime month) {
     final title = '${_monthNames[month.month - 1]} ${month.year}';
     return Row(
@@ -326,8 +324,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
       children: days.map((d) => Expanded(
         child: Center(
           child: Text(d, style: const TextStyle(
-            color: Color(0xFF8B97A6), fontWeight: FontWeight.bold, fontSize: 13))),
-      )).toList(),
+            color: Color(0xFF8B97A6), fontWeight: FontWeight.bold, fontSize: 13)))),
+      ).toList(),
     );
   }
 
@@ -347,18 +345,16 @@ class _VCalendarPageState extends State<VCalendarPage> {
         if (day < 1 || day > daysInMonth) {
           return const SizedBox();
         }
-        // whether the day is selected on the currently-visible month
         final isSelected = _selectedDate != null
             && _selectedDate!.year == month.year
             && _selectedDate!.month == month.month
             && _selectedDate!.day == day;
 
-  // determine special statuses from the bookingsByDay map
-  final bookingsForDay = bookingsByDay[day];
-  final isHoliday = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'HOLIDAY');
-  final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
-  final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
-
+        final bookingsForDay = bookingsByDay[day];
+        final isHoliday = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'HOLIDAY');
+        final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
+        final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
+        
         // Default visuals: transparent background, light border
         Color backgroundColor = Colors.transparent;
         Color borderColor = kBorder;
@@ -409,44 +405,24 @@ class _VCalendarPageState extends State<VCalendarPage> {
 
   // Compute the height needed for a calendar page given screen size and month.
   double _calendarHeightForPage(BuildContext context) {
-    // mirror the spacing used in the widget tree to calculate total height
     final month = _monthForPage(_pageController.hasClients ? _pageController.page?.round() ?? 120 : 120);
     final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
     final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
     final rows = ((firstWeekday + daysInMonth + 6) ~/ 7);
 
     final screenW = MediaQuery.of(context).size.width;
-    // container margin 12*2 and padding 12*2 (left/right) => subtract 48
     final availableWidth = screenW - 48;
     final totalCrossSpacing = 8.0 * (7 - 1);
     final cellWidth = (availableWidth - totalCrossSpacing) / 7.0;
-    final cellHeight = cellWidth * 0.95; // slightly shorter than width
+    final cellHeight = cellWidth * 0.95;
 
-    final headerHeight = 44.0; // month header
+    final headerHeight = 44.0;
     final weekHeaderHeight = 28.0;
-    final verticalGaps = 8.0 + 8.0; // SizedBox heights between pieces
+    final verticalGaps = 8.0 + 8.0;
     final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
-    final containerVerticalPadding = 16.0 + 20.0; // top and bottom padding of outer container
+    final containerVerticalPadding = 16.0 + 20.0;
 
     final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing + containerVerticalPadding + 8.0;
     return totalHeight;
   }
 }
-
-// Simple placeholder page for My Booking
-class _MyBookingsPage extends StatelessWidget {
-  const _MyBookingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Booking'), backgroundColor: kPrimaryDark),
-      body: const Center(
-        child: Text('My bookings will appear here.'),
-      ),
-    );
-  }
-}
-
-
-
