@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ibooking/dashboard.dart';
 import 'package:ibooking/myBooking.dart';  // Import MyBookingPage
 
@@ -7,12 +8,17 @@ const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
 const Color kAccentColor = Color(0xFF63B8FF);  // Light blue accent
 const Color kWarningColor = Colors.red;
 
-void main() {
-  runApp(const IBookingApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final loggedIn = prefs.getBool('isLoggedIn') ?? false;
+  runApp(IBookingApp(initialLoggedIn: loggedIn));
 }
 
 class IBookingApp extends StatelessWidget {
-  const IBookingApp({super.key});
+  final bool initialLoggedIn;
+
+  const IBookingApp({super.key, this.initialLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +35,7 @@ class IBookingApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginPage(),
+  home: initialLoggedIn ? const DashboardScreen() : const LoginPage(),
       routes: {
         '/myBookingPage': (context) => MyBookingPage(),  // Register the route here
         // You can add more routes if needed
@@ -61,10 +67,14 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email == correctEmail && password == correctPassword) {
       setState(() => errorMessage = null);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      );
+      // Persist login state so user doesn't have to re-login until they explicitly log out
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool('isLoggedIn', true);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      });
     } else {
       setState(() {
         errorMessage = "Email or password entered is incorrect.";

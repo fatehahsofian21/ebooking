@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/Vcalendar';
 import 'main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
 const Color kAccentColor = Color(0xFF63B8FF);
@@ -19,10 +20,22 @@ class DashboardScreen extends StatelessWidget {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const IBookingApp()),
-                (route) => false,
-              );
+              // Clear persisted login flag and return to login/root
+              // Import SharedPreferences lazily to avoid adding top-level import here
+              // so we can keep this file structure minimal.
+              // Use async closure to clear prefs then navigate.
+              () async {
+                try {
+                  final sp = await SharedPreferences.getInstance();
+                  await sp.setBool('isLoggedIn', false);
+                } catch (_) {
+                  // ignore
+                }
+                Navigator.of(ctx).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const IBookingApp()),
+                  (route) => false,
+                );
+              }();
             },
             child: const Text('Yes'),
           ),

@@ -24,17 +24,17 @@ class _VCalendarPageState extends State<VCalendarPage> {
   // In a real app you'd use a Booking model and key by full date.
   final Map<int, List<Map<String, String>>> bookingsByDay = {
     5: [
-      {'name': 'SHERA', 'department': 'Engineering', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'vehicle': 'Car'},
+      {'plate': 'WPC1234', 'name': 'SHERA', 'department': 'Engineering', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'vehicle': 'Car'},
     ],
     9: [
-      {'name': 'SAMIR', 'department': 'HR', 'time': '2:00 PM – 5:00 PM', 'status': 'PENDING', 'vehicle': 'Van'},
+      {'plate': 'VAN9988', 'name': 'SAMIR', 'department': 'HR', 'time': '2:00 PM – 5:00 PM', 'status': 'PENDING', 'vehicle': 'Van'},
     ],
     14: [
-      {'name': 'AMIRUL', 'department': 'Admin', 'time': '9:00 AM – 1:00 PM', 'status': 'APPROVED', 'vehicle': 'Bus'},
-      {'name': 'RIZAL', 'department': 'Admin', 'time': '2:00 PM – 4:00 PM', 'status': 'PENDING', 'vehicle': 'Car'},
+      {'plate': 'BUS1122', 'name': 'AMIRUL', 'department': 'Admin', 'time': '9:00 AM – 1:00 PM', 'status': 'APPROVED', 'vehicle': 'Bus'},
+      {'plate': 'CAR7788', 'name': 'RIZAL', 'department': 'Admin', 'time': '2:00 PM – 4:00 PM', 'status': 'PENDING', 'vehicle': 'Car'},
     ],
     22: [
-      {'name': 'JASON', 'department': 'Engineering', 'time': '11:00 AM – 2:00 PM', 'status': 'APPROVED', 'vehicle': 'Van'},
+      {'plate': 'VAN4455', 'name': 'JASON', 'department': 'Engineering', 'time': '11:00 AM – 2:00 PM', 'status': 'APPROVED', 'vehicle': 'Van'},
     ],
     25: [
       {'name': 'PUBLIC HOLIDAY', 'department': '', 'time': '', 'status': 'HOLIDAY', 'vehicle': ''},
@@ -88,7 +88,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Leave',
+        title: const Text('Vehicle',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
@@ -140,7 +140,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
 
               // Location strip
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                // reduced vertical margin so the selected date sits closer
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE9EDF3),
@@ -157,13 +158,23 @@ class _VCalendarPageState extends State<VCalendarPage> {
                 ),
               ),
 
-              // Show booking details when a date is selected
-              _selectedDate != null
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              // Show selected date pill and booking details when a date is selected
+        _selectedDate != null
+          ? Padding(
+            // smaller vertical padding so date is closer to the location strip
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start, // Align left
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Selected date (centered under the location strip)
+                          Center(
+                            child: Text(
+                              '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+
                           // If it's a holiday with only that label, show single label
                           if (_bookingsForSelectedDate != null &&
                               _bookingsForSelectedDate!.length == 1 &&
@@ -174,91 +185,51 @@ class _VCalendarPageState extends State<VCalendarPage> {
                                   color: kHoliday, fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                           ] else if (_bookingsForSelectedDate != null) ...[
-                            // List bookings as tappable cards
+                            // List bookings as tappable cards (reordered: plate, name, department, time)
                             ..._bookingsForSelectedDate!.map((b) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 10),
-                                child: InkWell(
-                                  onTap: () {
-                                    // show details dialog for this booking
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        title: Text(b['name'] ?? ''),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: kBorder),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text('Department: ${b['department'] ?? ''}'),
+                                            // Plate number displayed as the primary label (in the 'name' position)
+                                            if ((b['plate'] ?? '').isNotEmpty) Text(b['plate'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                             const SizedBox(height: 6),
-                                            Text('Date: ${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}'),
+                                            // shift other fields forward: show actual name after plate
+                                            Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                            const SizedBox(height: 4),
+                                            Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
                                             const SizedBox(height: 6),
-                                            if (b['time'] != null && b['time']!.isNotEmpty) Text('Time: ${b['time']}'),
-                                            if (b['vehicle'] != null && b['vehicle']!.isNotEmpty) ...[
-                                              const SizedBox(height: 6),
-                                              Text('Vehicle: ${b['vehicle']}'),
-                                            ],
-                                            const SizedBox(height: 10),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: b['status'] == 'APPROVED'
-                                                    ? kApproved
-                                                    : b['status'] == 'PENDING'
-                                                        ? kPending
-                                                        : kHoliday,
-                                                borderRadius: BorderRadius.circular(16),
-                                              ),
-                                              child: Text(
-                                                b['status'] ?? '',
-                                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
+                                            // show only time on the card (date shown above)
+                                            if (b['time'] != null && b['time']!.isNotEmpty) Text(b['time']!, style: const TextStyle(color: Colors.black87)),
                                           ],
                                         ),
-                                        actions: [
-                                          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Close')),
-                                        ],
                                       ),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: kBorder),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                              const SizedBox(height: 4),
-                                              Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
-                                              const SizedBox(height: 4),
-                                              Text('${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}${b['time'] != null && b['time']!.isNotEmpty ? ' • ${b['time']}' : ''}', style: const TextStyle(color: Colors.black87)),
-                                            ],
-                                          ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: b['status'] == 'APPROVED'
+                                              ? kApproved
+                                              : b['status'] == 'PENDING'
+                                                  ? kPending
+                                                  : kHoliday,
+                                          borderRadius: BorderRadius.circular(14),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: b['status'] == 'APPROVED'
-                                                ? kApproved
-                                                : b['status'] == 'PENDING'
-                                                    ? kPending
-                                                    : kHoliday,
-                                            borderRadius: BorderRadius.circular(14),
-                                          ),
-                                          child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                        )
-                                      ],
-                                    ),
+                                        child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      )
+                                    ],
                                   ),
                                 ),
                               );
@@ -388,27 +359,30 @@ class _VCalendarPageState extends State<VCalendarPage> {
   final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
   final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
 
+        // Default visuals: transparent background, light border
         Color backgroundColor = Colors.transparent;
         Color borderColor = kBorder;
+        double borderWidth = 1.25;
         Color textColor = const Color(0xFF2E3A59);
 
         if (isSelected) {
+          // Selected day remains filled to show active selection
           backgroundColor = kPrimaryDark;
           borderColor = kPrimaryDark;
+          borderWidth = 1.25;
           textColor = Colors.white;
         } else if (isHoliday) {
-          // holiday takes priority
-          backgroundColor = kHoliday; // red filled box for holiday
+          // Holidays: red and thicker so they are very visible
+          backgroundColor = Colors.transparent;
           borderColor = kHoliday;
-          textColor = Colors.white;
-        } else if (isApproved) {
-          backgroundColor = kApproved; // green filled box for approved
-          borderColor = kApproved;
-          textColor = Colors.white;
-        } else if (isPending) {
-          backgroundColor = kPending; // mustard filled box for pending
-          borderColor = kPending;
-          textColor = Colors.white;
+          borderWidth = 2.6; // thicker
+          textColor = const Color(0xFF2E3A59);
+        } else if (isApproved || isPending) {
+          // Approved/Pending: use the status color and make the border thicker so booking is obvious
+          backgroundColor = Colors.transparent;
+          borderColor = isApproved ? kApproved : kPending;
+          borderWidth = 2.6; // more visible
+          textColor = const Color(0xFF2E3A59);
         }
 
         return GestureDetector(
@@ -417,7 +391,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor, width: 1.25),
+              border: Border.all(color: borderColor, width: borderWidth),
             ),
             alignment: Alignment.center,
             child: Text(
