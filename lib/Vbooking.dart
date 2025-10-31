@@ -28,6 +28,13 @@ class _VBookingPageState extends State<VBookingPage> {
     {'plate': 'CAR7788', 'type': 'Car', 'model': 'Proton Persona'},
   ];
 
+  // ---- NEW: base capacities by vehicle type (adjust anytime) ----
+  final Map<String, int> _baseCapacityByType = const {
+    'Car': 4,
+    'Van': 12,
+    'Bus': 40,
+  };
+
   String? _selectedVehicleType; // stores selected plate number
   final TextEditingController _pickupLocationController = TextEditingController();
   final TextEditingController _returnLocationController = TextEditingController();
@@ -43,6 +50,40 @@ class _VBookingPageState extends State<VBookingPage> {
   // Google Maps API key provided by the user
   static const String _kGoogleMapsApiKey = 'AIzaSyCARTrKnNBreG5gSj6ObaatLEaxZ9a0rek';
 
+  // ---- NEW: helpers for capacity logic ----
+  String? _selectedVehicleTypeName() {
+    if (_selectedVehicleType == null) return null;
+    final v = _availableVehicles.firstWhere(
+      (e) => (e['plate'] ?? '') == _selectedVehicleType,
+      orElse: () => const {},
+    );
+    return v['type'];
+  }
+
+  int _baseCapacityForSelected() {
+    final type = _selectedVehicleTypeName();
+    if (type == null) return 1; // safe default
+    return _baseCapacityByType[type] ?? 1;
+  }
+
+  int _effectiveMaxPax() {
+    final base = _baseCapacityForSelected();
+    // If driver is required, driver occupies 1 seat
+    final max = _requireDriver ? (base - 1) : base;
+    return max.clamp(1, base); // ensure at least 1
+  }
+
+  void _ensurePaxWithinLimit() {
+    final max = _effectiveMaxPax();
+    if (_pax > max) {
+      setState(() => _pax = max);
+      // Optional toast/snackbar to inform user it was clamped
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pax adjusted to $max (max allowed for current vehicle/driver).')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _pickupLocationController.dispose();
@@ -56,6 +97,11 @@ class _VBookingPageState extends State<VBookingPage> {
     // Compute available plates and ensure dropdown value is valid for current items
     final _plates = _availableVehicles.map((v) => v['plate'] ?? '').toList();
     final _selectedPlate = _plates.contains(_selectedVehicleType) ? _selectedVehicleType : null;
+
+    final typeName = _selectedVehicleTypeName();
+    final baseCap = _baseCapacityForSelected();
+    final effMax = _effectiveMaxPax();
+    final withDriverNote = _requireDriver ? ' (driver counted)' : '';
 
     return Scaffold(
       appBar: AppBar(
@@ -102,9 +148,14 @@ class _VBookingPageState extends State<VBookingPage> {
                   // show model name and plate in brackets, value is the plate (unique id)
                   final model = v['model'] ?? '${v['type']}';
                   final plate = v['plate'] ?? '';
-                  return DropdownMenuItem(value: plate, child: Text('$model (${plate})'));
+                  return DropdownMenuItem(value: plate, child: Text('$model ($plate)'));
                 }).toList(),
-                onChanged: (s) => setState(() => _selectedVehicleType = s),
+                onChanged: (s) {
+                  setState(() {
+                    _selectedVehicleType = s;
+                    _ensurePaxWithinLimit();
+                  });
+                },
               ),
               const SizedBox(height: 16.0),
 
@@ -129,13 +180,28 @@ class _VBookingPageState extends State<VBookingPage> {
                       const SizedBox(width: 8),
                       Switch(
                         value: _requireDriver,
-                        onChanged: (v) => setState(() => _requireDriver = v),
+                        onChanged: (v) {
+                          setState(() {
+                            _requireDriver = v;
+                            _ensurePaxWithinLimit();
+                          });
+                        },
                         activeColor: kPrimaryColorEnd,
                       ),
                     ],
                   ),
                 ],
               ),
+
+              // ---- NEW: capacity helper line (subtle, does not change design layout) ----
+              const SizedBox(height: 6),
+              Text(
+                (typeName == null)
+                    ? 'Select a vehicle to see capacity.'
+                    : 'Max pax for $typeName$withDriverNote: $effMax',
+                style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
+              ),
+
               const SizedBox(height: 16),
 
               // Destination (opens a simple Map picker placeholder)
@@ -310,6 +376,15 @@ class _VBookingPageState extends State<VBookingPage> {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter purpose of booking')));
               return;
             }
+            // ---- NEW: Final pax check against current max ----
+            final effMax = _effectiveMaxPax();
+            if (_pax > effMax) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Pax exceeds limit ($effMax). Please reduce pax or change vehicle/driver.')),
+              );
+              return;
+            }
+
             // Trigger booking submission
             _onBookingSubmitted();
           },
@@ -328,8 +403,6 @@ class _VBookingPageState extends State<VBookingPage> {
       ),
     );
   }
-
-  // (Removed old vehicle button options - now using dropdown of plate numbers)
 
   // Location field with picker
   Widget _buildLocationField(String label, TextEditingController controller, {bool enabled = true}) {
@@ -371,9 +444,24 @@ class _VBookingPageState extends State<VBookingPage> {
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFDDDDDD)), color: Colors.white),
       child: Row(
         children: [
-          IconButton(onPressed: () => setState(() => _pax = (_pax > 1) ? _pax - 1 : 1), icon: const Icon(Icons.remove)),
+          IconButton(
+            onPressed: () => setState(() => _pax = (_pax > 1) ? _pax - 1 : 1),
+            icon: const Icon(Icons.remove),
+          ),
           Text('$_pax', style: const TextStyle(fontWeight: FontWeight.bold)),
-          IconButton(onPressed: () => setState(() => _pax = _pax + 1), icon: const Icon(Icons.add)),
+          IconButton(
+            onPressed: () {
+              final max = _effectiveMaxPax();
+              if (_pax >= max) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Max pax reached ($max).')),
+                );
+                return;
+              }
+              setState(() => _pax = _pax + 1);
+            },
+            icon: const Icon(Icons.add),
+          ),
         ],
       ),
     );
@@ -465,7 +553,7 @@ class _VBookingPageState extends State<VBookingPage> {
   // Simple placeholder page that simulates picking a location from a map.
   // Replace with a proper Google Maps picker integration when ready.
   // Returns a string location when popped.
-  
+
 }
 
 class MapPickerPage extends StatefulWidget {
@@ -529,10 +617,10 @@ class _MapPickerPageState extends State<MapPickerPage> {
   }
 
   Future<void> _selectPrediction(Map<String, String> pred) async {
-  final placeId = pred['place_id'];
-  if (placeId == null || placeId.isEmpty) return;
-  // include the same session token used for autocomplete if present
-  final url = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=${_VBookingPageState._kGoogleMapsApiKey}${_sessionToken != null ? '&sessiontoken=${_sessionToken}' : ''}');
+    final placeId = pred['place_id'];
+    if (placeId == null || placeId.isEmpty) return;
+    // include the same session token used for autocomplete if present
+    final url = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=${_VBookingPageState._kGoogleMapsApiKey}${_sessionToken != null ? '&sessiontoken=${_sessionToken}' : ''}');
     final resp = await http.get(url);
     if (resp.statusCode != 200) return;
     final jsonResp = json.decode(resp.body) as Map<String, dynamic>;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/Vcalendar';
-import 'main.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Re-added
+import 'package:ibooking/main.dart'; // ✅ Import main.dart to access LoginPage
 
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
 const Color kAccentColor = Color(0xFF63B8FF);
@@ -10,38 +10,42 @@ const Color kAccentColor = Color(0xFF63B8FF);
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  void _confirmLogout(BuildContext context) {
-    showDialog(
+  // Clear login flag then navigate to LoginPage and clear the stack
+  Future<void> _logout(BuildContext context) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.setBool('isLoggedIn', false); // Re-added login flag clearing
+    } catch (_) {
+      // ignore
+    }
+    
+    // ✅ FIX: Use MaterialPageRoute to directly navigate to LoginPage 
+    // and remove all previous screens.
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()), // Direct navigation
+        (route) => false,
+      );
+    }
+  }
+
+  // Confirm dialog before logout
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm Logout'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              // Clear persisted login flag and return to login/root
-              // Import SharedPreferences lazily to avoid adding top-level import here
-              // so we can keep this file structure minimal.
-              // Use async closure to clear prefs then navigate.
-              () async {
-                try {
-                  final sp = await SharedPreferences.getInstance();
-                  await sp.setBool('isLoggedIn', false);
-                } catch (_) {
-                  // ignore
-                }
-                Navigator.of(ctx).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const IBookingApp()),
-                  (route) => false,
-                );
-              }();
-            },
-            child: const Text('Yes'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      await _logout(context);
+    }
   }
 
   @override
@@ -72,14 +76,14 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // ===== Logout button =====
+              // ===== Logout button (Re-added) =====
               Positioned(
                 top: 25,
                 right: 16,
                 child: IconButton(
                   icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
                   tooltip: 'Log out',
-                  onPressed: () => _confirmLogout(context),
+                  onPressed: () => _confirmLogout(context), // Re-added call
                   style: IconButton.styleFrom(
                     shadowColor: Colors.white.withOpacity(0.4),
                     elevation: 10,
@@ -134,15 +138,11 @@ class DashboardScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          // Meeting Room button - replaced with custom image
                           _DashboardButton(
                             iconData: Icons.meeting_room,
                             label: 'Meeting Room',
-                            onTap: () {
-                              // No action yet
-                            },
+                            onTap: () {},
                           ),
-                          // Vehicle button - replaced with custom image
                           _DashboardButton(
                             iconData: Icons.directions_car,
                             label: 'Vehicle',
@@ -200,14 +200,13 @@ class DashboardScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Replacing the vehicle icon with custom image
+                          children: const [
                             Icon(Icons.directions_car, size: 32, color: Colors.white),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
                                     'Toyota Vellfire',
                                     style: TextStyle(
@@ -272,8 +271,7 @@ class _DashboardButton extends StatelessWidget {
     this.iconData,
     required this.label,
     required this.onTap,
-  }) : assert(imagePath != null || iconData != null,
-           'Either imagePath or iconData must be provided');
+  }) : assert(imagePath != null || iconData != null, 'Either imagePath or iconData must be provided');
 
   @override
   Widget build(BuildContext context) {
@@ -289,25 +287,17 @@ class _DashboardButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white.withOpacity(0.25), width: 0.8),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 8, offset: const Offset(0, 4)),
               ],
             ),
             child: (iconData != null)
                 ? Icon(iconData, size: 42, color: Colors.white)
-                : Image.asset(imagePath!, fit: BoxFit.cover), // Using custom image
+                : Image.asset(imagePath!, fit: BoxFit.cover),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ],
       ),

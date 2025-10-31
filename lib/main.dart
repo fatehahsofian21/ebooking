@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart'; // REMOVED
 import 'package:ibooking/dashboard.dart';
-import 'package:ibooking/myBooking.dart';  // Import MyBookingPage
+import 'package:ibooking/myBooking.dart';
 
 // Solid dark blue theme
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
@@ -10,15 +10,14 @@ const Color kWarningColor = Colors.red;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final loggedIn = prefs.getBool('isLoggedIn') ?? false;
-  runApp(IBookingApp(initialLoggedIn: loggedIn));
+  // Removed SharedPreferences check for initial login state
+  runApp(const IBookingApp()); // Always starts IBookingApp without initial state
 }
 
 class IBookingApp extends StatelessWidget {
-  final bool initialLoggedIn;
+  // Removed initialLoggedIn field
 
-  const IBookingApp({super.key, this.initialLoggedIn = false});
+  const IBookingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +34,14 @@ class IBookingApp extends StatelessWidget {
           ),
         ),
       ),
-  home: initialLoggedIn ? const DashboardScreen() : const LoginPage(),
+      // ✅ Set 'home' directly to LoginPage to make it the first screen
+      home: const LoginPage(),
+
+      // Named routes are still here for internal navigation
       routes: {
-        '/myBookingPage': (context) => MyBookingPage(),  // Register the route here
-        // You can add more routes if needed
+        '/login': (context) => const LoginPage(),
+        '/dashboard': (context) => const DashboardScreen(),
+        '/myBookingPage': (context) => MyBookingPage(),
       },
     );
   }
@@ -67,14 +70,13 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email == correctEmail && password == correctPassword) {
       setState(() => errorMessage = null);
-      // Persist login state so user doesn't have to re-login until they explicitly log out
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setBool('isLoggedIn', true);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      });
+      
+      // Removed SharedPreferences login state saving logic
+      
+      // ✅ Navigate to dashboard and clear the stack
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
+      
     } else {
       setState(() {
         errorMessage = "Email or password entered is incorrect.";
@@ -86,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Colors.white70),
-      filled: false, // transparent
+      filled: false,
       fillColor: Colors.transparent,
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       enabledBorder: OutlineInputBorder(
@@ -116,32 +118,20 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  // Logo and Title Section
                   Center(
                     child: Column(
                       children: [
-                        Image.asset(
-                          'assets/perkeso.png',
-                          height: 90,
-                          fit: BoxFit.contain,
-                        ),
+                        Image.asset('assets/perkeso.png', height: 90, fit: BoxFit.contain),
                         const SizedBox(height: 8.0),
                         const Text(
                           'iBooking',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white),
                         ),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 36.0),
-
-                  // Email field (transparent)
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -149,77 +139,45 @@ class _LoginPageState extends State<LoginPage> {
                     cursorColor: Colors.white,
                     decoration: _transparentFieldDecoration('Email'),
                   ),
-
                   const SizedBox(height: 16.0),
-
-                  // Password field (transparent) + eye icon
                   TextField(
                     controller: passwordController,
-                    obscureText: !_isPasswordVisible, // Toggle password visibility
+                    obscureText: !_isPasswordVisible,
                     style: const TextStyle(color: Colors.white),
                     cursorColor: Colors.white,
                     decoration: _transparentFieldDecoration('Password').copyWith(
-                      // Use IconButton directly as suffix and supply constraints so it appears reliably
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                          color: Colors.white,
-                        ),
+                        icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.white),
                         iconSize: 22,
                         padding: const EdgeInsets.all(8.0),
                         constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
-                          });
-                        },
+                        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                       ),
                     ),
                   ),
-
-                  // Forgot password (right-aligned, directly under password)
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(1, 1),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(1, 1), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                       child: const Text(
                         'Forgot password?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          decoration: TextDecoration.underline,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.0,
-                        ),
+                        style: TextStyle(color: Colors.white, decoration: TextDecoration.underline, fontWeight: FontWeight.w600, fontSize: 13.0),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 8.0),
-
-                  // Error message
                   if (errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6.0, bottom: 6.0),
                       child: Text(
                         errorMessage!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: kWarningColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.0,
-                        ),
+                        style: const TextStyle(color: kWarningColor, fontWeight: FontWeight.w600, fontSize: 13.0),
                       ),
                     ),
-
                   const SizedBox(height: 18.0),
-
-                  // Login Button
                   GradientButton(
                     text: 'Login',
                     onPressed: () => _handleLogin(context),
@@ -229,19 +187,13 @@ class _LoginPageState extends State<LoginPage> {
                       end: Alignment.centerRight,
                     ),
                   ),
-
                   const SizedBox(height: 22.0),
-
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text(
                       '**Please login using your PERKESO email address and password.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12.0,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 12.0, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -254,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// Gradient Button (kept gradient for contrast)
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -275,11 +226,7 @@ class GradientButton extends StatelessWidget {
         gradient: gradient,
         borderRadius: BorderRadius.circular(10.0),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 6)),
         ],
       ),
       child: Material(
@@ -288,14 +235,7 @@ class GradientButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(10.0),
           child: const Center(
-            child: Text(
-              'Login',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text('Login', style: TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold)),
           ),
         ),
       ),
