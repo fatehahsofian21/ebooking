@@ -1,17 +1,21 @@
-import 'package:flutter/material.dart';
-import 'package:ibooking/dashboard.dart';
-import 'package:ibooking/myBooking.dart'; // Import MyBookingPage
+// main.dart
 
-// Solid dark blue theme
+import 'package:flutter/material.dart';
+import 'package:ibooking/dashboard.dart'; // Correct: Imports the DashboardScreen from its own file.
+import 'package:ibooking/myBooking.dart';
+
+// --- Constants ---
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
-const Color kAccentColor = Color(0xFF63B8FF);  // Light blue accent
+const Color kAccentColor = Color(0xFF63B8FF); // Light blue accent
 const Color kWarningColor = Colors.red;
 
+// --- App Entry Point ---
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const IBookingApp());
 }
 
+// --- Root Widget ---
 class IBookingApp extends StatelessWidget {
   const IBookingApp({super.key});
 
@@ -22,39 +26,25 @@ class IBookingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        fontFamily: 'Roboto',  // Explicitly set Roboto as the default font.
+        fontFamily: 'Roboto',
         textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 40,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-          displayMedium: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          displaySmall: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: Colors.black,
-          ),
+          displayLarge: TextStyle(fontSize: 40, fontWeight: FontWeight.w700, color: Colors.white),
+          displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: Colors.white),
+          displaySmall: TextStyle(fontSize: 22, fontWeight: FontWeight.w500, color: Colors.white),
+          bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Colors.black),
         ),
         primaryColor: kPrimaryColor,
-        // Replacing accentColor with colorScheme
         colorScheme: ColorScheme.light(
           primary: kPrimaryColor,
           secondary: kAccentColor,
         ),
       ),
+      // The initial route is the LoginPage
       home: const LoginPage(),
+      // Named routes for navigation
       routes: {
         '/login': (context) => const LoginPage(),
+        // Correct: This route now points to the DashboardScreen imported from dashboard.dart
         '/dashboard': (context) => const DashboardScreen(),
         '/myBookingPage': (context) => MyBookingPage(),
       },
@@ -62,6 +52,7 @@ class IBookingApp extends StatelessWidget {
   }
 }
 
+// --- Login Page Widget ---
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -75,7 +66,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
   String? errorMessage;
 
-  // Dummy credentials
   final String correctEmail = "fatehah.sofian@perkeso.gov.my";
   final String correctPassword = "fatehah2102_";
 
@@ -86,6 +76,7 @@ class _LoginPageState extends State<LoginPage> {
     if (email == correctEmail && password == correctPassword) {
       setState(() => errorMessage = null);
       if (!mounted) return;
+      // This correctly navigates to the dashboard using the named route
       Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
     } else {
       setState(() {
@@ -133,11 +124,7 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Image.asset('assets/perkeso.png', height: 90, fit: BoxFit.contain),
                         const SizedBox(height: 8.0),
-                        const Text(
-                          'iBooking',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
+                        const Text('iBooking', textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
                       ],
                     ),
                   ),
@@ -158,9 +145,6 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: _transparentFieldDecoration('Password').copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.white),
-                        iconSize: 22,
-                        padding: const EdgeInsets.all(8.0),
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                         onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                       ),
                     ),
@@ -170,50 +154,23 @@ class _LoginPageState extends State<LoginPage> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(1, 1),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Forgot password?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          decoration: TextDecoration.underline,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.0,
-                        ),
-                      ),
+                      child: const Text('Forgot password?', style: TextStyle(color: Colors.white, decoration: TextDecoration.underline, fontWeight: FontWeight.w600, fontSize: 13.0)),
                     ),
                   ),
-                  const SizedBox(height: 8.0),
                   if (errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6.0, bottom: 6.0),
-                      child: Text(
-                        errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: kWarningColor, fontWeight: FontWeight.w600, fontSize: 13.0),
-                      ),
+                      child: Text(errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: kWarningColor, fontWeight: FontWeight.w600, fontSize: 13.0)),
                     ),
                   const SizedBox(height: 18.0),
                   GradientButton(
                     text: 'Login',
                     onPressed: () => _handleLogin(context),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF63B8FF), Color(0xFF1E88E5)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
                   ),
                   const SizedBox(height: 22.0),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      '**Please login using your PERKESO email address and password.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 12.0, fontWeight: FontWeight.w600),
-                    ),
+                    child: Text('**Please login using your PERKESO email address and password.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 12.0, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -225,36 +182,33 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// --- Helper Widget ---
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
-  final Gradient gradient;
 
-  const GradientButton({
-    super.key,
-    required this.text,
-    required this.onPressed,
-    required this.gradient,
-  });
+  const GradientButton({super.key, required this.text, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 50.0,
       decoration: BoxDecoration(
-        gradient: gradient,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF63B8FF), Color(0xFF1E88E5)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 6)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 6))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(10.0),
-          child: const Center(
-            child: Text('Login', style: TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold)),
+          child: Center(
+            child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold)),
           ),
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ibooking/Vbooking.dart';
 import 'package:ibooking/MyBooking.dart'; // Import your MyBooking.dart
+import 'package:ibooking/dashboard2.dart'; // Import Dashboard2Page
+import 'package:ibooking/myBooking2.dart';
 
 const Color kPrimaryDark = Color.fromARGB(255, 24, 42, 94); // dark blue
 const Color kApproved = Color(0xFF2ECC71); // green
@@ -21,8 +23,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
   DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
   // Dummy status data (just for demo)
-  // Map day -> list of bookings. Each booking is a small map for demo purposes.
-  // In a real app you'd use a Booking model and key by full date.
   final Map<int, List<Map<String, String>>> bookingsByDay = {
     5: [
       {'plate': 'WPC1234', 'name': 'SHERA', 'department': 'Engineering', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'vehicle': 'Car'},
@@ -52,13 +52,10 @@ class _VCalendarPageState extends State<VCalendarPage> {
     return DateTime(_baseMonth.year, _baseMonth.month + offset, 1);
   }
 
-  // Track selected date and its booking details
   DateTime? _selectedDate;
   List<Map<String, String>>? _bookingsForSelectedDate;
 
-  // bottom navigation state
   int _bottomNavIndex = 0;
-  // whether the user has tapped the bottom nav (controls when to show yellow)
   bool _hasUserSelectedBottomNav = false;
 
   void _onDateTapped(DateTime month, int day) {
@@ -75,6 +72,14 @@ class _VCalendarPageState extends State<VCalendarPage> {
     });
   }
 
+  // Navigation to Dashboard2
+  void _navigateToDashboard2() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const Dashboard2Screen()), // Navigate to Dashboard2
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,11 +91,17 @@ class _VCalendarPageState extends State<VCalendarPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Vehicle',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Vehicle', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        actions: [
+          // Added button on the top right to navigate to Dashboard2
+          IconButton(
+            icon: const Icon(Icons.arrow_forward, color: Colors.white),
+            onPressed: _navigateToDashboard2, // Navigate to Dashboard2
+          ),
+        ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(  // Wrap the entire body in a scrollable view
+        child: SingleChildScrollView( // Wrap the entire body in a scrollable view
           child: Column(
             children: [
               // Calendar card
@@ -101,44 +112,32 @@ class _VCalendarPageState extends State<VCalendarPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
+                    BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3)),
                   ],
                 ),
-                child: Column(
-                  children: [
-                    // Swipeable month header + grid. Use a computed height to avoid overflow
-                    Builder(builder: (context) {
-                      return SizedBox(
-                        height: _calendarHeightForPage(context),
-                        child: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (_) => setState(() {}),
-                          itemBuilder: (context, page) {
-                            final month = _monthForPage(page);
-                            return Column(
-                              children: [
-                                _monthHeader(month),
-                                const SizedBox(height: 8),
-                                _weekHeader(),
-                                const SizedBox(height: 8),
-                                _monthGrid(month),
-                              ],
-                            );
-                          },
-                        ),
+                child: SizedBox(
+                  // use compact dynamic height instead of fixed big height
+                  height: _calendarHeightForPage(context, compact: true),
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (_) => setState(() {}),
+                    itemBuilder: (context, page) {
+                      final month = _monthForPage(page);
+                      return Column(
+                        children: [
+                          _monthHeader(month),
+                          const SizedBox(height: 6),
+                          _weekHeader(),
+                          const SizedBox(height: 6),
+                          Expanded(child: _monthGrid(month)),
+                        ],
                       );
-                    }),
-                  ],
+                    },
+                  ),
                 ),
               ),
-
               // Location strip
               Container(
-                // reduced vertical margin so the selected date sits closer
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
@@ -155,94 +154,81 @@ class _VCalendarPageState extends State<VCalendarPage> {
                   ),
                 ),
               ),
-
-              // Show selected date pill and booking details when a date is selected
-        _selectedDate != null
-          ? Padding(
-            // smaller vertical padding so date is closer to the location strip
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Selected date (centered under the location strip)
-                          Center(
-                            child: Text(
-                              '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16),
-                            ),
+              // Show selected date and booking details
+              _selectedDate != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Text(
+                            '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16),
                           ),
-                          const SizedBox(height: 6),
-
-                          // If it's a holiday with only that label, show single label
-                          if (_bookingsForSelectedDate != null &&
-                              _bookingsForSelectedDate!.length == 1 &&
-                              _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[ 
-                            Text(
-                              'PUBLIC HOLIDAY',
-                              style: const TextStyle(
-                                  color: kHoliday, fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ] else if (_bookingsForSelectedDate != null) ...[
-                            // List bookings as tappable cards (reordered: plate, name, department, time)
-                            ..._bookingsForSelectedDate!.map((b) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: kBorder),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            // Plate number displayed as the primary label (in the 'name' position)
-                                            if ((b['plate'] ?? '').isNotEmpty) Text(b['plate'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                            const SizedBox(height: 6),
-                                            // shift other fields forward: show actual name after plate
-                                            Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                            const SizedBox(height: 4),
-                                            Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
-                                            const SizedBox(height: 6),
-                                            // show only time on the card (date shown above)
-                                            if (b['time'] != null && b['time']!.isNotEmpty) Text(b['time']!, style: const TextStyle(color: Colors.black87)),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: b['status'] == 'APPROVED'
-                                              ? kApproved
-                                              : b['status'] == 'PENDING'
-                                                  ? kPending
-                                                  : kHoliday,
-                                          borderRadius: BorderRadius.circular(14),
-                                        ),
-                                        child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                      )
-                                    ],
-                                  ),
+                        ),
+                        if (_bookingsForSelectedDate != null &&
+                            _bookingsForSelectedDate!.length == 1 &&
+                            _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[
+                          const Text(
+                            'PUBLIC HOLIDAY',
+                            style: TextStyle(color: kHoliday, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ] else if (_bookingsForSelectedDate != null) ...[
+                          ..._bookingsForSelectedDate!.map((b) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: kBorder),
                                 ),
-                              );
-                            }).toList(),
-                          ] else ...[ 
-                            // No booking message
-                            Text('No bookings for this date', style: const TextStyle(color: Colors.black54)),
-                          ],
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if ((b['plate'] ?? '').isNotEmpty)
+                                            Text(b['plate'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          const SizedBox(height: 6),
+                                          Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 4),
+                                          Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
+                                          const SizedBox(height: 6),
+                                          if (b['time'] != null && b['time']!.isNotEmpty)
+                                            Text(b['time']!, style: const TextStyle(color: Colors.black87)),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: b['status'] == 'APPROVED'
+                                            ? kApproved
+                                            : b['status'] == 'PENDING'
+                                                ? kPending
+                                                : kHoliday,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ] else ...[
+                          const Text('No bookings for this date', style: TextStyle(color: Colors.black54)),
                         ],
-                      ),
-                    )
-                  : Container(),
-
-              // Empty space at the bottom for scroll
-              const SizedBox(height: 24),
+                      ],
+                    ),
+                  )
+                : Container(),
             ],
           ),
         ),
@@ -252,23 +238,22 @@ class _VCalendarPageState extends State<VCalendarPage> {
         onTap: (i) {
           setState(() {
             _bottomNavIndex = i;
-            _hasUserSelectedBottomNav = true; // user explicitly selected an item
+            _hasUserSelectedBottomNav = true;
           });
 
           if (i == 0) {
-            // Summary - navigate or refresh calendar view
-            // If already on calendar, do nothing. If coming from elsewhere, you may push/pop accordingly.
+            // Summary - on this page already
           } else if (i == 1) {
-            // Booked Vehicle - navigate to vehicle booking page
+            // Navigate to VBookingPage (Booked Vehicle)
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
           } else if (i == 2) {
-            // My Booking - navigate to MyBooking page
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyBookingPage())); // Navigate to MyBookingPage
+            // Navigate to MyBookingPage
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyBookingPage()));
           }
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: kPrimaryDark,
-        selectedItemColor: _hasUserSelectedBottomNav ? kPending : Colors.white,
+        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Summary'),
@@ -279,7 +264,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
     );
   }
 
-  // ----- Pieces ----- 
   Widget _monthHeader(DateTime month) {
     final title = '${_monthNames[month.month - 1]} ${month.year}';
     return Row(
@@ -290,26 +274,17 @@ class _VCalendarPageState extends State<VCalendarPage> {
           color: kPrimaryDark,
           onPressed: () {
             if (_pageController.hasClients) {
-              _pageController.previousPage(
-                duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-            } else {
-              // fallback: jump one page relative to initial
-              _pageController.jumpToPage((_pageController.initialPage) - 1);
+              _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
             }
           },
         ),
-        Text(title,
-            style: const TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3A59))),
+        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3A59))),
         IconButton(
           icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
           color: kPrimaryDark,
           onPressed: () {
             if (_pageController.hasClients) {
-              _pageController.nextPage(
-                duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-            } else {
-              _pageController.jumpToPage((_pageController.initialPage) + 1);
+              _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
             }
           },
         ),
@@ -321,11 +296,18 @@ class _VCalendarPageState extends State<VCalendarPage> {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: days.map((d) => Expanded(
-        child: Center(
-          child: Text(d, style: const TextStyle(
-            color: Color(0xFF8B97A6), fontWeight: FontWeight.bold, fontSize: 13)))),
-      ).toList(),
+      children: days
+          .map(
+            (d) => Expanded(
+              child: Center(
+                child: Text(
+                  d,
+                  style: const TextStyle(color: Color(0xFF8B97A6), fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -354,35 +336,31 @@ class _VCalendarPageState extends State<VCalendarPage> {
         final isHoliday = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'HOLIDAY');
         final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
         final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
-        
-        // Default visuals: transparent background, light border
+
         Color backgroundColor = Colors.transparent;
         Color borderColor = kBorder;
         double borderWidth = 1.25;
         Color textColor = const Color(0xFF2E3A59);
 
         if (isSelected) {
-          // Selected day remains filled to show active selection
           backgroundColor = kPrimaryDark;
           borderColor = kPrimaryDark;
           borderWidth = 1.25;
           textColor = Colors.white;
         } else if (isHoliday) {
-          // Holidays: red and thicker so they are very visible
           backgroundColor = Colors.transparent;
           borderColor = kHoliday;
-          borderWidth = 2.6; // thicker
+          borderWidth = 2.6;
           textColor = const Color(0xFF2E3A59);
         } else if (isApproved || isPending) {
-          // Approved/Pending: use the status color and make the border thicker so booking is obvious
           backgroundColor = Colors.transparent;
           borderColor = isApproved ? kApproved : kPending;
-          borderWidth = 2.6; // more visible
+          borderWidth = 2.6;
           textColor = const Color(0xFF2E3A59);
         }
 
         return GestureDetector(
-          onTap: () => _onDateTapped(month, day), // pass month so selected date is correct
+          onTap: () => _onDateTapped(month, day),
           child: Container(
             decoration: BoxDecoration(
               color: backgroundColor,
@@ -403,26 +381,33 @@ class _VCalendarPageState extends State<VCalendarPage> {
     );
   }
 
-  // Compute the height needed for a calendar page given screen size and month.
-  double _calendarHeightForPage(BuildContext context) {
-    final month = _monthForPage(_pageController.hasClients ? _pageController.page?.round() ?? 120 : 120);
-    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
-    final rows = ((firstWeekday + daysInMonth + 6) ~/ 7);
+  // Method to calculate calendar height
+double _calendarHeightForPage(BuildContext context, {bool compact = false}) {
+  final month = _monthForPage(_pageController.hasClients ? _pageController.page?.round() ?? 120 : 120);
+  final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
+  final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7; // Sun=0
+  final rows = ((firstWeekday + daysInMonth + 6) ~/ 7);
 
-    final screenW = MediaQuery.of(context).size.width;
-    final availableWidth = screenW - 48;
-    final totalCrossSpacing = 8.0 * (7 - 1);
-    final cellWidth = (availableWidth - totalCrossSpacing) / 7.0;
-    final cellHeight = cellWidth * 0.95;
+  final screenW = MediaQuery.of(context).size.width;
+  final availableWidth = screenW - 48; // container horizontal padding & margins
+  final totalCrossSpacing = 8.0 * (7 - 1);
+  final cellWidth = (availableWidth - totalCrossSpacing) / 7.0;
 
-    final headerHeight = 44.0;
-    final weekHeaderHeight = 28.0;
-    final verticalGaps = 8.0 + 8.0;
-    final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
-    final containerVerticalPadding = 16.0 + 20.0;
+  // Make the cells taller to show all data
+  final cellHeight = cellWidth * 0.87; // Increase this multiplier to make cells larger
 
-    final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing + containerVerticalPadding + 8.0;
-    return totalHeight;
-  }
+  final headerHeight = compact ? 40.0 : 44.0;
+  final weekHeaderHeight = compact ? 24.0 : 28.0;
+  final verticalGaps = (compact ? 6.0 : 8.0) + (compact ? 6.0 : 8.0);
+  final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
+  final containerVerticalPadding = 16.0 + 20.0;
+
+  // Total height including header, grid, and padding
+  final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing + containerVerticalPadding + 6.0;
+
+  // Ensure the height does not exceed a reasonable limit
+  final maxHeight = 480.0;  // Adjust as needed
+  return totalHeight.clamp(300.0, maxHeight);  // Adjust for the proper fit
+}
+
 }
