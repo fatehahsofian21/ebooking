@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/Vcalendar';
-import 'package:shared_preferences/shared_preferences.dart'; // Re-added
-import 'package:ibooking/main.dart'; // ✅ Import main.dart to access LoginPage
+// import 'package:shared_preferences/shared_preferences.dart'; // REMOVED
+import 'package:ibooking/main.dart'; 
 
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
 const Color kAccentColor = Color(0xFF63B8FF);
@@ -10,14 +10,9 @@ const Color kAccentColor = Color(0xFF63B8FF);
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  // Clear login flag then navigate to LoginPage and clear the stack
+  // Logout function: Only navigates to LoginPage and clears the stack
   Future<void> _logout(BuildContext context) async {
-    try {
-      final sp = await SharedPreferences.getInstance();
-      await sp.setBool('isLoggedIn', false); // Re-added login flag clearing
-    } catch (_) {
-      // ignore
-    }
+    // REMOVED SharedPreferences logic (no more saving/clearing login state)
     
     // ✅ FIX: Use MaterialPageRoute to directly navigate to LoginPage 
     // and remove all previous screens.

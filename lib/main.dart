@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-// import 'package:shared_preferences/shared_preferences.dart'; // REMOVED
 import 'package:ibooking/dashboard.dart';
-import 'package:ibooking/myBooking.dart';
+import 'package:ibooking/myBooking.dart'; // Import MyBookingPage
 
 // Solid dark blue theme
 const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // Dark Blue
@@ -10,13 +9,10 @@ const Color kWarningColor = Colors.red;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Removed SharedPreferences check for initial login state
-  runApp(const IBookingApp()); // Always starts IBookingApp without initial state
+  runApp(const IBookingApp());
 }
 
 class IBookingApp extends StatelessWidget {
-  // Removed initialLoggedIn field
-
   const IBookingApp({super.key});
 
   @override
@@ -26,18 +22,37 @@ class IBookingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
+        fontFamily: 'Roboto',  // Explicitly set Roboto as the default font.
         textTheme: const TextTheme(
-          displaySmall: TextStyle(
-            fontSize: 28,
+          displayLarge: TextStyle(
+            fontSize: 40,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
+          displayMedium: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          displaySmall: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+        ),
+        primaryColor: kPrimaryColor,
+        // Replacing accentColor with colorScheme
+        colorScheme: ColorScheme.light(
+          primary: kPrimaryColor,
+          secondary: kAccentColor,
         ),
       ),
-      // ✅ Set 'home' directly to LoginPage to make it the first screen
       home: const LoginPage(),
-
-      // Named routes are still here for internal navigation
       routes: {
         '/login': (context) => const LoginPage(),
         '/dashboard': (context) => const DashboardScreen(),
@@ -70,13 +85,8 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email == correctEmail && password == correctPassword) {
       setState(() => errorMessage = null);
-      
-      // Removed SharedPreferences login state saving logic
-      
-      // ✅ Navigate to dashboard and clear the stack
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (route) => false);
-      
     } else {
       setState(() {
         errorMessage = "Email or password entered is incorrect.";
@@ -93,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.0),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.55), width: 1.2),
+        borderSide: BorderSide(color: Colors.white70.withOpacity(0.55), width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.0),
@@ -160,10 +170,19 @@ class _LoginPageState extends State<LoginPage> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(1, 1), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(1, 1),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: const Text(
                         'Forgot password?',
-                        style: TextStyle(color: Colors.white, decoration: TextDecoration.underline, fontWeight: FontWeight.w600, fontSize: 13.0),
+                        style: TextStyle(
+                          color: Colors.white,
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.0,
+                        ),
                       ),
                     ),
                   ),

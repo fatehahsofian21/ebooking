@@ -1,17 +1,16 @@
-name: ibooking  # Your project name
+name: ibooking
 description: A new Flutter project.
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
-# Correct SDK constraint
 environment:
-  sdk: '^3.9.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  intl: ^0.19.0  # <-- Add this line if needed
+  intl: ^0.19.0
   http: ^0.13.6
   google_maps_flutter: ^2.2.5
   shared_preferences: ^2.1.1
@@ -23,4 +22,3 @@ flutter:
     - assets/bangunan1.jpg
     - assets/perkeso.png
     - assets/profile.png
-  
