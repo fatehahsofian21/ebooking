@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Required for FilteringTextInputFormatter
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-// Use the same core color theme as the calendar page
-// Primary dark (same as kPrimaryDark in Vcalendar)
-const Color kPrimaryColorStart = Color.fromARGB(255, 24, 42, 94); // dark blue
-const Color kPrimaryColorEnd = Color.fromARGB(255, 24, 42, 94);   // keep same for a solid look
-// Background to match calendar page grey
-const Color kBackgroundColor = Color(0xFFF2F3F7);
+// --- Brand Guideline Colors (Refined) ---
+const Color kPrimaryColor = Color(0xFF007DC5); // PERKESO's primary blue
+const Color kBackgroundColor = Color(0xFFF5F5F5); // Standard light gray background
 
 class VBookingPage extends StatefulWidget {
   const VBookingPage({super.key});
@@ -27,17 +25,19 @@ class _VBookingPageState extends State<VBookingPage> {
     {'plate': 'CAR7788', 'type': 'Car', 'model': 'Proton Persona'},
   ];
 
-  // ---- NEW: base capacities by vehicle type (adjust anytime) ----
   final Map<String, int> _baseCapacityByType = const {
     'Car': 4,
     'Van': 12,
     'Bus': 40,
   };
 
-  String? _selectedVehicleType; // stores selected plate number
+  String? _selectedVehicleType;
   final TextEditingController _pickupLocationController = TextEditingController();
   final TextEditingController _returnLocationController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
+  // NEW: Controller for the pax input field
+  final TextEditingController _paxController = TextEditingController();
+
   DateTime? _pickupDateTime;
   DateTime? _returnDateTime;
   bool _sameLocation = false;
@@ -46,10 +46,8 @@ class _VBookingPageState extends State<VBookingPage> {
   String? _uploadedDocName;
   String? _purpose;
 
-  // Google Maps API key provided by the user
-  static const String _kGoogleMapsApiKey = 'AIzaSyCARTrKnNBreG5gSj6ObaatLEaxZ9a0rek';
+  static const String _kGoogleMapsApiKey = 'YOUR_API_KEY_HERE';
 
-  // ---- NEW: helpers for capacity logic ----
   String? _selectedVehicleTypeName() {
     if (_selectedVehicleType == null) return null;
     final v = _availableVehicles.firstWhere(
@@ -61,26 +59,34 @@ class _VBookingPageState extends State<VBookingPage> {
 
   int _baseCapacityForSelected() {
     final type = _selectedVehicleTypeName();
-    if (type == null) return 1; // safe default
+    if (type == null) return 1;
     return _baseCapacityByType[type] ?? 1;
   }
 
   int _effectiveMaxPax() {
     final base = _baseCapacityForSelected();
-    // If driver is required, driver occupies 1 seat
     final max = _requireDriver ? (base - 1) : base;
-    return max.clamp(1, base); // ensure at least 1
+    return max.clamp(1, base);
   }
 
   void _ensurePaxWithinLimit() {
     final max = _effectiveMaxPax();
     if (_pax > max) {
-      setState(() => _pax = max);
-      // Optional toast/snackbar to inform user it was clamped
+      setState(() {
+        _pax = max;
+        _paxController.text = _pax.toString();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Pax adjusted to $max (max allowed for current vehicle/driver).')),
       );
     }
+  }
+
+  // NEW: Initialize the controller's text in initState
+  @override
+  void initState() {
+    super.initState();
+    _paxController.text = _pax.toString();
   }
 
   @override
@@ -88,23 +94,23 @@ class _VBookingPageState extends State<VBookingPage> {
     _pickupLocationController.dispose();
     _returnLocationController.dispose();
     _destinationController.dispose();
+    _paxController.dispose(); // NEW: Dispose the pax controller
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Compute available plates and ensure dropdown value is valid for current items
     final _plates = _availableVehicles.map((v) => v['plate'] ?? '').toList();
     final _selectedPlate = _plates.contains(_selectedVehicleType) ? _selectedVehicleType : null;
 
     final typeName = _selectedVehicleTypeName();
-    final baseCap = _baseCapacityForSelected();
     final effMax = _effectiveMaxPax();
     final withDriverNote = _requireDriver ? ' (driver counted)' : '';
 
     return Scaffold(
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kPrimaryColorEnd,
+        backgroundColor: kPrimaryColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
@@ -123,8 +129,6 @@ class _VBookingPageState extends State<VBookingPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 6.0),
-
-              // Vehicle Type Selection (dropdown of plate numbers)
               const Text(
                 'Select Vehicle *',
                 style: TextStyle(
@@ -134,17 +138,16 @@ class _VBookingPageState extends State<VBookingPage> {
                 ),
               ),
               const SizedBox(height: 12.0),
-
               DropdownButtonFormField<String>(
                 value: _selectedPlate,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 hint: const Text('Select vehicle'),
                 items: _availableVehicles.map((v) {
-                  // show model name and plate in brackets, value is the plate (unique id)
                   final model = v['model'] ?? '${v['type']}';
                   final plate = v['plate'] ?? '';
                   return DropdownMenuItem(value: plate, child: Text('$model ($plate)'));
@@ -157,25 +160,22 @@ class _VBookingPageState extends State<VBookingPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-
-              // Date & Time Picker (moved directly under vehicle selection)
               _buildDateTimeSelection(),
               const SizedBox(height: 16),
-
-              // Number of pax and driver requirement (directly after date/time)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Text('Pax *: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Pax *:', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
                       const SizedBox(width: 8),
+                      // UPDATED: This widget now allows text input
                       _buildPaxControl(),
                     ],
                   ),
                   Row(
                     children: [
-                      const Text('Require driver', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Require Driver', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
                       const SizedBox(width: 8),
                       Switch(
                         value: _requireDriver,
@@ -185,14 +185,12 @@ class _VBookingPageState extends State<VBookingPage> {
                             _ensurePaxWithinLimit();
                           });
                         },
-                        activeColor: kPrimaryColorEnd,
+                        activeColor: kPrimaryColor,
                       ),
                     ],
                   ),
                 ],
               ),
-
-              // ---- NEW: capacity helper line (subtle, does not change design layout) ----
               const SizedBox(height: 6),
               Text(
                 (typeName == null)
@@ -200,32 +198,29 @@ class _VBookingPageState extends State<VBookingPage> {
                     : 'Max pax for $typeName$withDriverNote: $effMax',
                 style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
               ),
-
               const SizedBox(height: 16),
 
-              // Destination (opens a simple Map picker placeholder)
-              const Text('Destination *', style: TextStyle(fontWeight: FontWeight.w600)),
+              // ... (rest of the build method remains the same)
+              const Text('Destination *', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
               const SizedBox(height: 8),
               TextField(
                 controller: _destinationController,
                 readOnly: true,
                 onTap: () async {
-                  // Open the full map picker and receive a structured result
                   final loc = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPickerPage()));
                   if (loc != null && loc is Map<String, dynamic>) {
                     setState(() => _destinationController.text = loc['address'] ?? '');
                   }
                 },
                 decoration: InputDecoration(
-                  hintText: 'Select',
+                  hintText: 'Select on map',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
+                  suffixIcon: const Icon(Icons.map, color: kPrimaryColor),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Pick-Up & Return Location and same checkbox (moved after destination)
               Row(
                 children: [
                   Expanded(child: _buildLocationField('Pick-Up Location *', _pickupLocationController, enabled: true)),
@@ -237,6 +232,7 @@ class _VBookingPageState extends State<VBookingPage> {
                 children: [
                   Checkbox(
                     value: _sameLocation,
+                    activeColor: kPrimaryColor,
                     onChanged: (v) {
                       setState(() {
                         _sameLocation = v ?? false;
@@ -246,24 +242,20 @@ class _VBookingPageState extends State<VBookingPage> {
                       });
                     },
                   ),
-                  const Text('Return location same as pickup'),
+                  const Text('Return location same as pickup', style: TextStyle(color: Colors.black87)),
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Purpose of booking (make mandatory)
               _buildPurposeField(isRequired: true),
               const SizedBox(height: 16),
-
-              // Supported document (optional) - moved below purpose
-              const Text('Supported Document (optional)', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Supported Document (optional)', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
               const SizedBox(height: 8),
               Row(
                 children: [
                   ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColorEnd),
+                    style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
                     onPressed: () async {
-                      // Mock device chooser: let user choose Files (PDF) or Photos (not supported)
+                      // Mock file picker logic remains the same
                       final source = await showModalBottomSheet<String?>(context: context, builder: (ctx) {
                         return SafeArea(
                           child: Column(
@@ -290,7 +282,6 @@ class _VBookingPageState extends State<VBookingPage> {
                       });
 
                       if (source == 'files') {
-                        // Show a mock list of PDFs that might exist on the device
                         final pdf = await showDialog<String?>(context: context, builder: (ctx) {
                           return SimpleDialog(
                             title: const Text('Select PDF'),
@@ -308,15 +299,13 @@ class _VBookingPageState extends State<VBookingPage> {
                       }
                     },
                     icon: const Icon(Icons.upload_file, color: Colors.white),
-                    label: const Text('Upload document', style: TextStyle(color: Colors.white)),
+                    label: const Text('Upload Document', style: TextStyle(color: Colors.white)),
                   ),
                   const SizedBox(width: 12),
-                  if (_uploadedDocName != null) Expanded(child: Text(_uploadedDocName!)),
+                  if (_uploadedDocName != null) Expanded(child: Text(_uploadedDocName!, style: const TextStyle(color: Colors.black54))),
                 ],
               ),
               const SizedBox(height: 22),
-
-              // Submit Button
               _buildSubmitButton(),
               const SizedBox(height: 40),
             ],
@@ -327,20 +316,19 @@ class _VBookingPageState extends State<VBookingPage> {
   }
 
   Future<void> _onBookingSubmitted() async {
-    // Show success dialog with green popup
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.green.shade100, // Green background for success
+        backgroundColor: Colors.green.shade100,
         title: const Text('Booking Submitted'),
         content: const Text('Your booking request has been successfully submitted.'),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pop(); // Close the dialog
-              Navigator.pushNamed(context, '/myBookingPage'); // Navigate to MyBooking.dart
+              Navigator.of(ctx).pop();
+              Navigator.pushNamed(context, '/myBookingPage');
             },
-            child: const Text('OK', style: TextStyle(color: Colors.green)),
+            child: const Text('OK', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -348,67 +336,62 @@ class _VBookingPageState extends State<VBookingPage> {
   }
 
   Widget _buildSubmitButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 50.0,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [kPrimaryColorStart, kPrimaryColorEnd],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: kPrimaryColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
         ),
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (_selectedVehicleType == null) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a vehicle')));
-              return;
-            }
-            if (_pickupDateTime == null || _returnDateTime == null) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select pickup and return date/time')));
-              return;
-            }
-            if (_purpose == null || _purpose!.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter purpose of booking')));
-              return;
-            }
-            // ---- NEW: Final pax check against current max ----
-            final effMax = _effectiveMaxPax();
-            if (_pax > effMax) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Pax exceeds limit ($effMax). Please reduce pax or change vehicle/driver.')),
-              );
-              return;
-            }
+        onPressed: () {
+          if (_selectedVehicleType == null) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a vehicle')));
+            return;
+          }
+          if (_pickupDateTime == null || _returnDateTime == null) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select pickup and return date/time')));
+            return;
+          }
+          if (_purpose == null || _purpose!.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter the purpose of booking')));
+            return;
+          }
+          final effMax = _effectiveMaxPax();
+          if (_pax > effMax) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Pax exceeds limit ($effMax). Please reduce pax or change vehicle/driver.')),
+            );
+            return;
+          }
+          if (_pax < 1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pax must be at least 1.')),
+            );
+            return;
+          }
 
-            // Trigger booking submission
-            _onBookingSubmitted();
-          },
-          borderRadius: BorderRadius.circular(10.0),
-          child: const Center(
-            child: Text(
-              'Submit Booking',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          _onBookingSubmitted();
+        },
+        child: const Text(
+          'Submit Booking',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
     );
   }
 
-  // Location field with picker
   Widget _buildLocationField(String label, TextEditingController controller, {bool enabled = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -416,7 +399,6 @@ class _VBookingPageState extends State<VBookingPage> {
           enabled: enabled,
           onTap: enabled
               ? () async {
-                  // Open the map picker for pickup/return location selection
                   final loc = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPickerPage()));
                   if (loc != null && loc is Map<String, dynamic>) {
                     setState(() {
@@ -429,25 +411,55 @@ class _VBookingPageState extends State<VBookingPage> {
           decoration: InputDecoration(
             hintText: 'Select location',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: enabled ? Colors.white : Colors.grey.shade200,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
+            suffixIcon: Icon(Icons.location_on, color: enabled ? kPrimaryColor : Colors.grey),
           ),
         ),
       ],
     );
   }
 
+  // REFINED: This widget now includes a TextField for direct input.
   Widget _buildPaxControl() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFDDDDDD)), color: Colors.white),
       child: Row(
         children: [
           IconButton(
-            onPressed: () => setState(() => _pax = (_pax > 1) ? _pax - 1 : 1),
-            icon: const Icon(Icons.remove),
+            onPressed: () {
+              setState(() {
+                _pax = (_pax > 1) ? _pax - 1 : 1;
+                // Sync controller with the new value
+                _paxController.text = _pax.toString();
+              });
+            },
+            icon: const Icon(Icons.remove, color: kPrimaryColor),
+            visualDensity: VisualDensity.compact,
           ),
-          Text('$_pax', style: const TextStyle(fontWeight: FontWeight.bold)),
+          // NEW: TextField for direct user input
+          SizedBox(
+            width: 40,
+            child: TextField(
+              controller: _paxController,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              // Only allow digits
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                border: InputBorder.none, // Hide the underline
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              onChanged: (value) {
+                // Update the internal _pax variable when user types
+                setState(() {
+                  _pax = int.tryParse(value) ?? 1;
+                });
+              },
+            ),
+          ),
           IconButton(
             onPressed: () {
               final max = _effectiveMaxPax();
@@ -457,9 +469,14 @@ class _VBookingPageState extends State<VBookingPage> {
                 );
                 return;
               }
-              setState(() => _pax = _pax + 1);
+              setState(() {
+                _pax = _pax + 1;
+                // Sync controller with the new value
+                _paxController.text = _pax.toString();
+              });
             },
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: kPrimaryColor),
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
@@ -467,10 +484,36 @@ class _VBookingPageState extends State<VBookingPage> {
   }
 
   Future<void> _pickDateTime({required bool isPickup}) async {
-    final date = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 365)));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: kPrimaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
     if (date == null) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: 9, minute: 0));
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: kPrimaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
     if (time == null) return;
+
     final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
     setState(() {
       if (isPickup) {
@@ -485,35 +528,47 @@ class _VBookingPageState extends State<VBookingPage> {
     return '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  // Date and Time Picker widget
   Widget _buildDateTimeSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Pick-Up & Return Date & Time *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        const Text('Pick-Up & Return Date & Time *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87)),
         const SizedBox(height: 8.0),
-        InkWell(
-          onTap: () => _pickDateTime(isPickup: true),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10.0), border: Border.all(color: const Color(0xFFDDDDDD))),
-            child: Row(children: [const Icon(Icons.calendar_today, color: Colors.black54), const SizedBox(width: 8.0), Text(_pickupDateTime != null ? '${_formatDateTime(_pickupDateTime!)}' : 'Pick-Up Date & Time')]),
-          ),
+        _buildDateTimePickerField(
+          isPickup: true,
+          dateTime: _pickupDateTime,
+          label: 'Pick-Up Date & Time',
         ),
         const SizedBox(height: 10.0),
-        InkWell(
-          onTap: () => _pickDateTime(isPickup: false),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10.0), border: Border.all(color: const Color(0xFFDDDDDD))),
-            child: Row(children: [const Icon(Icons.calendar_today, color: Colors.black54), const SizedBox(width: 8.0), Text(_returnDateTime != null ? '${_formatDateTime(_returnDateTime!)}' : 'Return Date & Time')]),
-          ),
+        _buildDateTimePickerField(
+          isPickup: false,
+          dateTime: _returnDateTime,
+          label: 'Return Date & Time',
         ),
       ],
     );
   }
 
-  // Purpose text field
+  Widget _buildDateTimePickerField({required bool isPickup, required DateTime? dateTime, required String label}) {
+    return InkWell(
+      onTap: () => _pickDateTime(isPickup: isPickup),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10.0), border: Border.all(color: const Color(0xFFDDDDDD))),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today, color: kPrimaryColor),
+            const SizedBox(width: 12.0),
+            Text(
+              dateTime != null ? _formatDateTime(dateTime) : label,
+              style: TextStyle(color: dateTime != null ? Colors.black87 : Colors.grey.shade600),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPurposeField({bool isRequired = false}) {
     final label = isRequired ? 'Purpose of Booking *' : 'Purpose of Booking (optional)';
     return Column(
@@ -523,8 +578,8 @@ class _VBookingPageState extends State<VBookingPage> {
           label,
           style: const TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF333333),
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 8.0),
@@ -548,13 +603,9 @@ class _VBookingPageState extends State<VBookingPage> {
       ],
     );
   }
-
-  // Simple placeholder page that simulates picking a location from a map.
-  // Replace with a proper Google Maps picker integration when ready.
-  // Returns a string location when popped.
-
 }
 
+// --- Map Picker Page (Remains the same) ---
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
 
@@ -571,7 +622,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Timer? _debounce;
   String? _sessionToken;
 
-  // Center map at KL by default
   static const LatLng _initialCenter = LatLng(3.1390, 101.6869);
 
   @override
@@ -584,22 +634,16 @@ class _MapPickerPageState extends State<MapPickerPage> {
 
   Future<void> _searchPlaces(String input) async {
     if (input.trim().isEmpty) return;
-    // Create a simple session token per autocomplete interaction to improve billing/accuracy
     _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-
-    // bias results toward the current map center or a sensible default
     final biasLat = _selectedMarker?.position.latitude ?? _initialCenter.latitude;
     final biasLng = _selectedMarker?.position.longitude ?? _initialCenter.longitude;
-    final locationBias = 'circle:20000@${biasLat},${biasLng}'; // 20km bias
-
-    // Use autocomplete without forcing 'types=geocode' so we get a broader set of relevant suggestions.
+    final locationBias = 'circle:20000@${biasLat},${biasLng}';
     final url = Uri.parse('https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${Uri.encodeQueryComponent(input)}&key=${_VBookingPageState._kGoogleMapsApiKey}&sessiontoken=${_sessionToken}&locationbias=${Uri.encodeQueryComponent(locationBias)}');
     final resp = await http.get(url);
     if (resp.statusCode != 200) return;
     final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
     final preds = (jsonResp['predictions'] as List<dynamic>?) ?? [];
     setState(() {
-      // parse structured_formatting for primary/secondary text to show a nicer suggestion list
       _predictions = preds.map((p) {
         final s = p as Map<String, dynamic>;
         final structured = s['structured_formatting'] as Map<String, dynamic>?;
@@ -618,7 +662,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Future<void> _selectPrediction(Map<String, String> pred) async {
     final placeId = pred['place_id'];
     if (placeId == null || placeId.isEmpty) return;
-    // include the same session token used for autocomplete if present
     final url = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=${_VBookingPageState._kGoogleMapsApiKey}${_sessionToken != null ? '&sessiontoken=${_sessionToken}' : ''}');
     final resp = await http.get(url);
     if (resp.statusCode != 200) return;
@@ -630,15 +673,13 @@ class _MapPickerPageState extends State<MapPickerPage> {
     final lat = (location?['lat'] as num?)?.toDouble() ?? _initialCenter.latitude;
     final lng = (location?['lng'] as num?)?.toDouble() ?? _initialCenter.longitude;
     final formatted = result['formatted_address'] as String? ?? pred['description']!;
-
     final pos = LatLng(lat, lng);
     _mapController?.animateCamera(CameraUpdate.newLatLngZoom(pos, 15));
     setState(() {
       _selectedMarker = Marker(markerId: const MarkerId('selected'), position: pos, infoWindow: InfoWindow(title: formatted));
       _predictions = [];
       _searchController.text = formatted;
-      _selectedAddress = formatted; // keep selection until user confirms
-      // clear session token so a new typing session will create a fresh one
+      _selectedAddress = formatted;
       _sessionToken = null;
     });
   }
@@ -662,7 +703,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pick destination')),
+      appBar: AppBar(
+        title: const Text('Pick Destination', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: kPrimaryColor,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Column(
         children: [
           Padding(
@@ -674,7 +719,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     controller: _searchController,
                     decoration: const InputDecoration(hintText: 'Search places', filled: true, fillColor: Colors.white, border: OutlineInputBorder()),
                     onChanged: (v) {
-                      // Debounce user input to avoid too many network calls
                       _debounce?.cancel();
                       _debounce = Timer(const Duration(milliseconds: 350), () {
                         if (v.trim().isEmpty) {
@@ -688,7 +732,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: () => _searchPlaces(_searchController.text), child: const Text('Search')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
+                  onPressed: () => _searchPlaces(_searchController.text),
+                  child: const Text('Search', style: TextStyle(color: Colors.white)),
+                ),
               ],
             ),
           ),
@@ -715,13 +763,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 markers: _selectedMarker != null ? {_selectedMarker!} : {},
                 myLocationEnabled: false,
                 onTap: (latlng) async {
-                  // When user taps the map, reverse geocode and pin
                   await _reverseGeocode(latlng);
                   _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latlng, 15));
                 },
               ),
             ),
-          // Show a persistent confirm bar when a location is selected
           if (_selectedAddress != null)
             Padding(
               padding: const EdgeInsets.all(12.0),
@@ -730,12 +776,13 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   Expanded(child: Text(_selectedAddress!, maxLines: 2, overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 8),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
                     onPressed: () => Navigator.of(context).pop({
                       'address': _selectedAddress,
                       'lat': _selectedMarker?.position.latitude,
                       'lng': _selectedMarker?.position.longitude,
                     }),
-                    child: const Text('Select'),
+                    child: const Text('Select', style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),

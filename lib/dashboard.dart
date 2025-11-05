@@ -1,17 +1,18 @@
-// dashboard.dart (VERSI TERAKHIR DIPERBAIKI)
+// dashboard.dart (CORRECTED COLORS FOR LIGHT BACKGROUND)
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/Vcalendar';
-import 'package:ibooking/main.dart'; 
+import 'package:ibooking/main.dart';
 
-const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94);
+// --- Brand Guideline Colors ---
+const Color kPrimaryColor = Color(0xFF007DC5);
+const Color kBackgroundColor = Color(0xFFF5F5F5); // The standard light gray background
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  // --- Logik Logout (Kekal sama kerana sudah betul) ---
-
+  // --- Logout Logic (Remains the same) ---
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -44,29 +45,30 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
+        // CHANGED: Status bar icons are now dark to be visible on the light background
+        value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
         ),
         child: Container(
           width: double.infinity,
           height: double.infinity,
-          color: kPrimaryColor,
+          // The background is the standard light gray
+          color: kBackgroundColor,
           child: Stack(
             children: [
-              // Lapisan 1: Header Image
+              // Layer 1: Header Image (Unchanged)
               SizedBox(
                 width: double.infinity,
-                height: 280,
+                height: 260,
                 child: ClipPath(
                   clipper: _StraightHeaderClipper(),
                   child: Image.asset('assets/bangunan.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
                 ),
               ),
               
-              // Lapisan 2: Profile Picture
+              // Layer 2: Profile Picture (Unchanged)
               Positioned(
-                top: 240,
+                top: 220,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -78,14 +80,16 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // Lapisan 3: Kandungan Boleh Skrol
+              // Layer 3: Scrollable Content
               SingleChildScrollView(
                 child: Column(
                   children: [
-                    const SizedBox(height: 340),
-                    const Text('Nor Fatehah Binti Sofian', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                    const SizedBox(height: 330),
+                    // CHANGED: Text color is now dark for readability
+                    const Text('Nor Fatehah Binti Sofian', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                     const SizedBox(height: 4),
-                    const Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                    // CHANGED: Text color is now gray for readability
+                    Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                     const SizedBox(height: 45),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36),
@@ -111,11 +115,12 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 85),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 36.0),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('Upcoming Booking', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        // CHANGED: Text color is now dark for readability
+                        child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -124,24 +129,28 @@ class DashboardScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.07),
+                          // CHANGED: Card background is now solid white
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.7),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
+                          // Optional: A more subtle shadow for a light background
+                          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.directions_car, size: 32, color: Colors.white),
-                            SizedBox(width: 12),
+                          children: [
+                            // CHANGED: Icon now uses the primary brand color
+                            const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Toyota Vellfire', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 2),
-                                  Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  // CHANGED: Text color is now dark for readability
+                                  const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 2),
+                                  // CHANGED: Text color is now gray for readability
+                                  Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                                 ],
                               ),
                             ),
@@ -154,22 +163,14 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // ===================================================================
-              // LAPISAN 4 (TERAKHIR & PALING ATAS): BUTANG LOGOUT
-              // Diletakkan di sini untuk memastikan ia tidak dihalang oleh apa-apa.
-              // ===================================================================
+              // Layer 4: Logout Button (Unchanged, as it's on the dark image)
               Positioned(
-                top: 25,
+                top: 40,
                 right: 16,
                 child: IconButton(
                   icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
                   tooltip: 'Log out',
                   onPressed: () => _confirmLogout(context),
-                  style: IconButton.styleFrom(
-                    shadowColor: Colors.white.withOpacity(0.4),
-                    elevation: 10,
-                    backgroundColor: Colors.transparent,
-                  ),
                 ),
               ),
             ],
@@ -180,7 +181,7 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-// --- Helper Widgets ---
+// --- Helper Widgets (With Color Adjustments) ---
 class _StraightHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -207,15 +208,18 @@ class _DashboardButton extends StatelessWidget {
             height: 85,
             width: 85,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              // CHANGED: Button background is now solid white
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.25), width: 0.8),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 8, offset: const Offset(0, 4))],
+              // Optional: A more subtle shadow for a light background
+              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            child: Icon(iconData, size: 42, color: Colors.white),
+            // CHANGED: Icon now uses the primary brand color
+            child: Icon(iconData, size: 42, color: kPrimaryColor),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+          // CHANGED: Text color is now dark for readability
+          Text(label, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w600)),
         ],
       ),
     );

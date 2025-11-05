@@ -3,8 +3,9 @@ import 'package:ibooking/Vbooking.dart'; // Assuming these pages are defined els
 import 'package:ibooking/MyBooking.dart'; // Import your MyBooking.dart
 import 'package:ibooking/myBooking2.dart'; // Import the file containing MyBooking2Page
 
-const Color kPrimaryColor = Color.fromARGB(255, 24, 42, 94); // dark blue
-const Color kAccentColor = Color(0xFF63B8FF);
+// --- COLORS UPDATED TO FOLLOW GUIDELINES ---
+const Color kPrimaryBlue = Color(0xFF007DC5); // The official primary blue from your guideline
+const Color kAccentColor = Color(0xFF8DC63E); // The official accent green
 
 class Dashboard2Screen extends StatefulWidget {
   const Dashboard2Screen({super.key});
@@ -60,7 +61,8 @@ class _Dashboard2ScreenState extends State<Dashboard2Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kPrimaryColor,
+        // CHANGED: Using the guideline color
+        backgroundColor: kPrimaryBlue,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -95,7 +97,8 @@ class _Dashboard2ScreenState extends State<Dashboard2Screen> {
                       ),
                       // Place the photo icon at the right of the "Show More Details"
                       IconButton(
-                        icon: const Icon(Icons.image, color: Colors.blue), // Image icon
+                        // CHANGED: Using the guideline color for the icon
+                        icon: const Icon(Icons.image, color: kPrimaryBlue), // Image icon
                         onPressed: () => _showImage(context), // Show image popup on button click
                       ),
                     ],
@@ -135,7 +138,8 @@ class _Dashboard2ScreenState extends State<Dashboard2Screen> {
         ],
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
-        backgroundColor: kPrimaryColor,
+        // CHANGED: Using the guideline color
+        backgroundColor: kPrimaryBlue,
       ),
     );
   }

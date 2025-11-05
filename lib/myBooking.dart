@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+// Import the rating bar package
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:ibooking/Vcalendar';
 import 'package:ibooking/dashboard.dart';
 import 'package:ibooking/Vbooking.dart';
 
-const Color kPrimaryDark = Color.fromARGB(255, 24, 42, 94); // dark blue
-const Color kApproved = Color(0xFF007DC5); // blue (default)
-const Color kPending = Color(0xFFF39F21); // mustard yellow
-const Color kWarning = Color(0xFFA82525); // red (for rejected/canceled)
-const Color kHoliday = Color(0xFFE74C3C); // red for holidays
-const Color kComplete = Color(0xFF2ECC71); // green for complete status
-const Color kBorder = Color(0xFFCFD6DE);
-const Color kGreyBg = Color(0xFFF2F3F7);
+// --- Brand Guideline Colors (Refined) ---
+const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
+const Color kPrimaryDarkColor = Color.fromARGB(255, 24, 42, 94); // Dark blue for containers
+const Color kBackgroundColor = Color(0xFFF5F5F5);   // Standard light gray background
 
-// Helper function to format DateTime object for display
+// --- Status & Semantic Colors ---
+const Color kApproved = Color(0xFF007DC5);     // Blue (matches primary)
+const Color kPending = Color(0xFFF39F21);     // Mustard yellow
+const Color kWarning = Color(0xFFA82525);     // Red (for rejected/canceled/errors)
+const Color kComplete = Color(0xFF2ECC71);    // Green for complete status
+const Color kBorder = Color(0xFFCFD6DE);
+
+// Helper functions remain unchanged
 String _formatDateTime(String? dt) {
   if (dt == null || dt.isEmpty) return 'N/A';
   try {
@@ -23,7 +28,6 @@ String _formatDateTime(String? dt) {
   }
 }
 
-// Helper function to format time only
 String _formatTime(String? dt) {
   if (dt == null || dt.isEmpty) return '';
   try {
@@ -34,7 +38,6 @@ String _formatTime(String? dt) {
   }
 }
 
-// Helper function to determine status color
 Color _statusColor(String status) {
   switch (status) {
     case 'PENDING':
@@ -47,7 +50,7 @@ Color _statusColor(String status) {
       return kComplete;
     case 'REJECTED':
       return kWarning;
-    case 'CANCELED': // Added CANCELED status for clarity
+    case 'CANCELED':
       return kWarning;
     default:
       return Colors.grey;
@@ -55,13 +58,14 @@ Color _statusColor(String status) {
 }
 
 // =========================================================================
-// BOOKING DETAILS PAGE (NEW)
+// BOOKING DETAILS PAGE (REFINED WITH REJECTION REASON)
 // =========================================================================
 class BookingDetailsPage extends StatelessWidget {
   final Map<String, dynamic> booking;
   const BookingDetailsPage({super.key, required this.booking});
 
-  Widget _buildInfoRow(String title, String? value) {
+  // UPDATED: _buildInfoRow now accepts an optional color for the value text
+  Widget _buildInfoRow(String title, String? value, {Color valueColor = const Color(0xFF2E3A59)}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Column(
@@ -72,15 +76,15 @@ class BookingDetailsPage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF8B97A6), // Lighter color for label
+              color: Color(0xFF8B97A6),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value ?? 'N/A',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Color(0xFF2E3A59), // Darker color for value
+              color: valueColor, // Use the provided color
             ),
           ),
           const Divider(height: 16),
@@ -138,6 +142,7 @@ class BookingDetailsPage extends StatelessWidget {
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
+              style: TextButton.styleFrom(foregroundColor: kWarning),
               child: const Text('Yes, Cancel'),
               onPressed: () {
                 if (cancelReason.trim().isEmpty) {
@@ -146,14 +151,176 @@ class BookingDetailsPage extends StatelessWidget {
                   );
                   return;
                 }
-                // Mock cancellation logic
                 Navigator.of(dialogContext).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Booking $bookingId canceled with reason: $cancelReason')),
                 );
-                // In a real app, you would update the booking status in the backend and locally.
-                Navigator.of(context).pop(); // Go back to MyBookingPage
+                Navigator.of(context).pop();
               },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showFeedbackDialog(BuildContext context) async {
+    double _rating = 3.0;
+    final TextEditingController _feedbackController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Feedback'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('How was the driver?', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: RatingBar.builder(
+                        initialRating: _rating,
+                        minRating: 1,
+                        direction: Axis.horizontal,
+                        itemCount: 5,
+                        itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        itemBuilder: (context, _) => const Icon(Icons.star, color: kPending),
+                        onRatingUpdate: (rating) {
+                          setState(() {
+                            _rating = rating;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _feedbackController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'Add your comments here...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
+              onPressed: () {
+                final feedbackText = _feedbackController.text;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Feedback submitted: $_rating stars. Comment: $feedbackText')),
+                );
+              },
+              child: const Text('Submit', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showComplaintDialog(BuildContext context) async {
+    String? _selectedCategory;
+    double _severity = 1.0;
+    final TextEditingController _complaintController = TextEditingController();
+    final List<String> categories = ['Driver Behavior', 'Vehicle Condition', 'Punctuality', 'Other'];
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('File a Complaint'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Complaint Category *', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8.0,
+                      children: categories.map((category) {
+                        return ChoiceChip(
+                          label: Text(category),
+                          selected: _selectedCategory == category,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedCategory = selected ? category : null;
+                            });
+                          },
+                          selectedColor: kPrimaryColor,
+                          labelStyle: TextStyle(
+                            color: _selectedCategory == category ? Colors.white : Colors.black,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Severity Level', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      value: _severity,
+                      min: 0,
+                      max: 2,
+                      divisions: 2,
+                      label: _severity == 0 ? 'Minor' : (_severity == 1 ? 'Moderate' : 'Urgent'),
+                      activeColor: _severity == 2 ? kWarning : (_severity == 1 ? kPending : kComplete),
+                      onChanged: (value) {
+                        setState(() {
+                          _severity = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _complaintController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'Please describe the issue...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: kWarning),
+              onPressed: () {
+                if (_selectedCategory == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a complaint category.')),
+                  );
+                  return;
+                }
+                final complaintText = _complaintController.text;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Complaint filed for $_selectedCategory. Details: $complaintText')),
+                );
+              },
+              child: const Text('Submit', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -182,11 +349,7 @@ class BookingDetailsPage extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigating to Add Feedback form...')),
-                );
-              },
+              onPressed: () => _showFeedbackDialog(context),
               style: OutlinedButton.styleFrom(
                 foregroundColor: kComplete,
                 side: BorderSide(color: kComplete),
@@ -198,13 +361,8 @@ class BookingDetailsPage extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            // FIX IS HERE: changed from ElevatedButton to ElevatedButton.icon
-            child: ElevatedButton.icon( 
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Navigating to File Complaint form...')),
-                );
-              },
+            child: ElevatedButton.icon(
+              onPressed: () => _showComplaintDialog(context),
               icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
               label: const Text('Complain', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
@@ -217,15 +375,15 @@ class BookingDetailsPage extends StatelessWidget {
         ],
       );
     }
-    return const SizedBox.shrink(); // Hide button for other statuses
+    return const SizedBox.shrink();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kGreyBg,
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kPrimaryDark,
+        backgroundColor: kPrimaryColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -239,15 +397,12 @@ class BookingDetailsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status Tag
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
                   child: _buildStatusTag(booking['status'] ?? 'UNKNOWN'),
                 ),
               ),
-
-              // Booking Information Card (non-editable)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -260,7 +415,7 @@ class BookingDetailsPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryDark)),
+                    const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
                     const SizedBox(height: 16),
                     _buildInfoRow('Vehicle Type', '${booking['vehicle'] ?? 'N/A'} (${booking['model'] ?? 'N/A'})'),
                     _buildInfoRow('Plate Number', booking['plate'] ?? 'N/A'),
@@ -273,12 +428,13 @@ class BookingDetailsPage extends StatelessWidget {
                     _buildInfoRow('Return Location', booking['returnLocation']),
                     _buildInfoRow('Purpose of Booking', booking['purpose']),
                     _buildInfoRow('Supported Document', booking['uploadedDocName'] ?? 'No document uploaded'),
+                    // NEW: Conditionally show the rejection reason in red
+                    if (booking['status'] == 'REJECTED' && booking['rejectionReason'] != null)
+                      _buildInfoRow('Rejection Reason', booking['rejectionReason'], valueColor: kWarning),
                   ],
                 ),
               ),
               const SizedBox(height: 30),
-
-              // Action Buttons
               _buildActionButtons(context),
             ],
           ),
@@ -289,9 +445,8 @@ class BookingDetailsPage extends StatelessWidget {
 }
 
 // =========================================================================
-// MY BOOKING PAGE (ORIGINAL)
+// MY BOOKING PAGE (REFINED WITH COLORS AND REJECTION REASON)
 // =========================================================================
-
 class MyBookingPage extends StatefulWidget {
   const MyBookingPage({super.key});
   @override
@@ -302,18 +457,17 @@ class _MyBookingPageState extends State<MyBookingPage> {
   final PageController _pageController = PageController(initialPage: 120);
   DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
-  // Demo bookings with all fields to simulate VBooking.dart data
+  // UPDATED: Added a rejection reason to the demo data
   final List<Map<String, dynamic>> _bookings = [
     {'id': '1', 'vehicle': 'Car', 'plate': 'WPC1234', 'status': 'PENDING', 'pickupDate': '2025-10-05 10:00', 'returnDate': '2025-10-05 14:00', 'model': 'Toyota Vios', 'pax': 2, 'requireDriver': true, 'destination': 'Kuala Lumpur Convention Centre', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Official meeting with stakeholders.', 'uploadedDocName': 'meeting_req.pdf'},
     {'id': '2', 'vehicle': 'Van', 'plate': 'VAN9988', 'status': 'APPROVED', 'pickupDate': '2025-10-09 14:00', 'returnDate': '2025-10-09 17:00', 'model': 'Toyota Hiace', 'pax': 5, 'requireDriver': false, 'destination': 'Klang Valley Site A', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'Klang Valley Site A', 'purpose': 'Site inspection and survey.', 'uploadedDocName': null},
     {'id': '3', 'vehicle': 'Bus', 'plate': 'BUS1122', 'status': 'APPROVED', 'pickupDate': '2025-10-14 09:00', 'returnDate': '2025-10-14 13:00', 'model': 'Isuzu Bus', 'pax': 20, 'requireDriver': true, 'destination': 'Penang Bridge', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Outstation team building trip.', 'uploadedDocName': 'approval_letter.pdf'},
     {'id': '4', 'vehicle': 'Car', 'plate': 'CAR7788', 'status': 'PENDING', 'pickupDate': '2025-10-14 14:00', 'returnDate': '2025-10-14 16:00', 'model': 'Proton Persona', 'pax': 1, 'requireDriver': false, 'destination': 'Putrajaya Office', 'pickupLocation': 'Putrajaya Office', 'returnLocation': 'Putrajaya Office', 'purpose': 'Urgent document delivery.', 'uploadedDocName': null},
     {'id': '5', 'vehicle': '', 'plate': '', 'status': 'HOLIDAY', 'pickupDate': '2025-10-25 00:00', 'returnDate': '2025-10-25 00:00', 'name': 'PUBLIC HOLIDAY', 'model': null, 'pax': 0, 'requireDriver': false, 'destination': null, 'pickupLocation': null, 'returnLocation': null, 'purpose': null, 'uploadedDocName': null},
-    {'id': '6', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit for project handover.', 'uploadedDocName': null}, // Complete status
-    {'id': '7', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf'}, // Rejected status
+    {'id': '6', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit for project handover.', 'uploadedDocName': null},
+    {'id': '7', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf', 'rejectionReason': 'Vehicle unavailable due to scheduled maintenance.'},
   ];
 
-  // Map day -> list of bookings for quick lookup (recomputed in init)
   final Map<int, List<Map<String, dynamic>>> bookingsByDay = {};
   DateTime _monthForPage(int page) {
     final offset = page - 120;
@@ -336,9 +490,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
         final pickup = DateTime.parse(b['pickupDate']!);
         final day = pickup.day;
         bookingsByDay.putIfAbsent(day, () => []).add(b);
-      } catch (_) {
-        // ignore parse errors for demo data
-      }
+      } catch (_) {}
     }
   }
 
@@ -354,7 +506,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
   }
 
-  // NEW: Navigation function to BookingDetailsPage
   void _navigateToBookingDetails(Map<String, dynamic> booking) {
     Navigator.push(
       context,
@@ -367,9 +518,10 @@ class _MyBookingPageState extends State<MyBookingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kGreyBg,
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kPrimaryDark,
+        // RESTORED: Using the primary guideline color
+        backgroundColor: kPrimaryColor,
         elevation: 0,
         leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -381,7 +533,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              //  card
               Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
@@ -410,16 +561,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
                   ),
                 ),
               ),
-              // Location strip
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(color: const Color(0xFFE9EDF3), borderRadius: BorderRadius.circular(8)),
-                alignment: Alignment.center,
-                child: const Text('PERKESO JALAN AMPANG',
-                    style: TextStyle(color: Color(0xFF2E3A59), fontWeight: FontWeight.bold, letterSpacing: 0.7)),
-              ),
-              // Selected date area
               if (_selectedDate != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -427,15 +568,17 @@ class _MyBookingPageState extends State<MyBookingPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(
-                          child: Text('${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16))),
+                        child: Text(
+                          '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: kPrimaryDarkColor, fontSize: 16),
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       Builder(builder: (_) {
                         if (_bookingsForSelectedDate != null && _bookingsForSelectedDate!.isNotEmpty) {
                           return Column(
                             children: _bookingsForSelectedDate!.map((b) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
-                                  // WRAP THE CARD IN GESTURE DETECTOR TO MAKE IT CLICKABLE
                                   child: GestureDetector(
                                     onTap: () => _navigateToBookingDetails(b),
                                     child: Container(
@@ -455,11 +598,20 @@ class _MyBookingPageState extends State<MyBookingPage> {
                                                   Text(b['plate']!,
                                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                                 const SizedBox(height: 6),
-                                                Text(b['vehicle'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                                Text(b['vehicle'] ?? b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
                                                 const SizedBox(height: 6),
-                                                Text(
-                                                    '${_formatTime(b['pickupDate'])} - ${_formatTime(b['returnDate'])}',
-                                                    style: const TextStyle(color: Colors.black87)),
+                                                if ((b['status'] ?? '') != 'HOLIDAY')
+                                                  Text(
+                                                      '${_formatTime(b['pickupDate'])} - ${_formatTime(b['returnDate'])}',
+                                                      style: const TextStyle(color: Colors.black87)),
+                                                // NEW: Conditionally display rejection reason in the card
+                                                if (b['status'] == 'REJECTED' && b['rejectionReason'] != null) ...[
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    'Reason: ${b['rejectionReason']}',
+                                                    style: const TextStyle(color: kWarning, fontSize: 12),
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ),
@@ -478,7 +630,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
                                 )).toList(),
                           );
                         }
-                        return const Text('No bookings for this date', style: TextStyle(color: Colors.black54));
+                        return const Center(child: Text('No bookings for this date', style: TextStyle(color: Colors.black54)));
                       }),
                     ],
                   ),
@@ -492,62 +644,49 @@ class _MyBookingPageState extends State<MyBookingPage> {
         currentIndex: 2,
         onTap: (i) {
           if (i == 0) {
-            // Summary -> navigate to calendar (VCalendarPage)
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VCalendarPage()));
           } else if (i == 1) {
-            // Booked Vehicle -> booking form
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
           }
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: kPrimaryDark,
-        selectedItemColor: kPending,
+        // RESTORED: Using the primary guideline color
+        backgroundColor: kPrimaryColor,
+        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Summary'),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Booked Vehicle'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'My Booking'),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Book Vehicle'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'My Bookings'),
         ],
       ),
     );
   }
 
-  // ----- helpers (copied/adapted from Vcalendar) -----
   static const _monthNames = <String>[
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
+
   Widget _monthHeader(DateTime month) {
     final title = '${_monthNames[month.month - 1]} ${month.year}';
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          color: kPrimaryDark,
+          color: kPrimaryColor,
           onPressed: () {
-            if (_pageController.hasClients)
+            if (_pageController.hasClients) {
               _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-            else
-              _pageController.jumpToPage((_pageController.initialPage) - 1);
+            }
           }),
-      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3A59))),
+      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryDarkColor)),
       IconButton(
           icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-          color: kPrimaryDark,
+          color: kPrimaryColor,
           onPressed: () {
-            if (_pageController.hasClients)
+            if (_pageController.hasClients) {
               _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-            else
-              _pageController.jumpToPage((_pageController.initialPage) + 1);
+            }
           }),
     ]);
   }
@@ -567,7 +706,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
 
   Widget _monthGrid(DateTime month) {
     final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7; // Sun=0
+    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
     final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7;
     return GridView.builder(
         physics: const NeverScrollableScrollPhysics(),
@@ -580,18 +719,18 @@ class _MyBookingPageState extends State<MyBookingPage> {
           final isSelected =
               _selectedDate != null && _selectedDate!.year == month.year && _selectedDate!.month == month.month && _selectedDate!.day == day;
           final bookingsForDay = bookingsByDay[day];
-          final isHoliday = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'HOLIDAY');
-          final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
-          final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
-          final isComplete = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'COMPLETE');
-          final isRejected = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'REJECTED');
+          final isHoliday = bookingsForDay?.any((b) => (b['status'] ?? '') == 'HOLIDAY') ?? false;
+          final isApproved = bookingsForDay?.any((b) => (b['status'] ?? '') == 'APPROVED') ?? false;
+          final isPending = bookingsForDay?.any((b) => (b['status'] ?? '') == 'PENDING') ?? false;
+          final isComplete = bookingsForDay?.any((b) => (b['status'] ?? '') == 'COMPLETE') ?? false;
+          final isRejected = bookingsForDay?.any((b) => (b['status'] ?? '') == 'REJECTED') ?? false;
           Color backgroundColor = Colors.transparent;
           Color borderColor = kBorder;
           double borderWidth = 1.25;
-          Color textColor = const Color(0xFF2E3A59);
+          Color textColor = kPrimaryDarkColor;
           if (isSelected) {
-            backgroundColor = kPrimaryDark;
-            borderColor = kPrimaryDark;
+            backgroundColor = kPrimaryColor;
+            borderColor = kPrimaryColor;
             borderWidth = 1.25;
             textColor = Colors.white;
           } else if (isHoliday) {

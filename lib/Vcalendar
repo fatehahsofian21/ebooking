@@ -2,14 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:ibooking/Vbooking.dart';
 import 'package:ibooking/MyBooking.dart'; // Import your MyBooking.dart
 import 'package:ibooking/dashboard2.dart'; // Import Dashboard2Page
-import 'package:ibooking/myBooking2.dart';
 
-const Color kPrimaryDark = Color.fromARGB(255, 24, 42, 94); // dark blue
-const Color kApproved = Color(0xFF2ECC71); // green
-const Color kPending = Color(0xFFE1B12C); // mustard yellow
-const Color kHoliday = Color(0xFFE74C3C); // red
+// --- COLORS UPDATED & SYNCHRONIZED WITH MyBooking.dart ---
+const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
+const Color kBackgroundColor = Color(0xFFF5F5F5);   // Standard light gray background
+const Color kApproved = Color(0xFF007DC5);     // Blue (matches primary)
+const Color kPending = Color(0xFFF39F21);     // Mustard yellow
+const Color kWarning = Color(0xFFA82525);     // Red for rejected/canceled/errors
+const Color kComplete = Color(0xFF2ECC71);    // Green for complete status
 const Color kBorder = Color(0xFFCFD6DE);
-const Color kGreyBg = Color(0xFFF2F3F7);
+
+// --- NEW: Helper function to determine status color, same as in MyBooking.dart ---
+Color _statusColor(String status) {
+  switch (status) {
+    case 'PENDING':
+      return kPending;
+    case 'APPROVED':
+      return kApproved;
+    case 'HOLIDAY':
+      return kWarning;
+    case 'COMPLETE':
+      return kComplete;
+    case 'REJECTED':
+      return kWarning;
+    case 'CANCELED':
+      return kWarning;
+    default:
+      return Colors.grey;
+  }
+}
 
 class VCalendarPage extends StatefulWidget {
   const VCalendarPage({super.key});
@@ -18,11 +39,10 @@ class VCalendarPage extends StatefulWidget {
 }
 
 class _VCalendarPageState extends State<VCalendarPage> {
-  // Use a long-running page controller so swipes can go far back/forward
   final PageController _pageController = PageController(initialPage: 120);
   DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
-  // Dummy status data (just for demo)
+  // UPDATED: Dummy data now includes all statuses for demonstration
   final Map<int, List<Map<String, String>>> bookingsByDay = {
     5: [
       {'plate': 'WPC1234', 'name': 'SHERA', 'department': 'Engineering', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'vehicle': 'Car'},
@@ -34,8 +54,11 @@ class _VCalendarPageState extends State<VCalendarPage> {
       {'plate': 'BUS1122', 'name': 'AMIRUL', 'department': 'Admin', 'time': '9:00 AM – 1:00 PM', 'status': 'APPROVED', 'vehicle': 'Bus'},
       {'plate': 'CAR7788', 'name': 'RIZAL', 'department': 'Admin', 'time': '2:00 PM – 4:00 PM', 'status': 'PENDING', 'vehicle': 'Car'},
     ],
-    22: [
-      {'plate': 'VAN4455', 'name': 'JASON', 'department': 'Engineering', 'time': '11:00 AM – 2:00 PM', 'status': 'APPROVED', 'vehicle': 'Van'},
+    18: [
+      {'plate': 'REJ1111', 'name': 'DAVID', 'department': 'IT', 'time': '1:00 PM – 2:00 PM', 'status': 'REJECTED', 'vehicle': 'Car'},
+    ],
+    20: [
+      {'plate': 'COM2222', 'name': 'ANNA', 'department': 'Finance', 'time': '9:00 AM – 11:00 AM', 'status': 'COMPLETE', 'vehicle': 'Car'},
     ],
     25: [
       {'name': 'PUBLIC HOLIDAY', 'department': '', 'time': '', 'status': 'HOLIDAY', 'vehicle': ''},
@@ -63,7 +86,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
 
     setState(() {
       _selectedDate = selectedDate;
-      // populate bookings list for the selected date
       if (bookingsByDay.containsKey(day)) {
         _bookingsForSelectedDate = bookingsByDay[day];
       } else {
@@ -72,20 +94,21 @@ class _VCalendarPageState extends State<VCalendarPage> {
     });
   }
 
-  // Navigation to Dashboard2
   void _navigateToDashboard2() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const Dashboard2Screen()), // Navigate to Dashboard2
+      MaterialPageRoute(builder: (_) => const Dashboard2Screen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kGreyBg,
+      // CHANGED: Using the standard background color
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        backgroundColor: kPrimaryDark,
+        // CHANGED: Using the guideline color
+        backgroundColor: kPrimaryColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -93,18 +116,16 @@ class _VCalendarPageState extends State<VCalendarPage> {
         ),
         title: const Text('Vehicle', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          // Added button on the top right to navigate to Dashboard2
           IconButton(
             icon: const Icon(Icons.arrow_forward, color: Colors.white),
-            onPressed: _navigateToDashboard2, // Navigate to Dashboard2
+            onPressed: _navigateToDashboard2,
           ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView( // Wrap the entire body in a scrollable view
+        child: SingleChildScrollView(
           child: Column(
             children: [
-              // Calendar card
               Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
@@ -116,7 +137,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
                   ],
                 ),
                 child: SizedBox(
-                  // use compact dynamic height instead of fixed big height
                   height: _calendarHeightForPage(context, compact: true),
                   child: PageView.builder(
                     controller: _pageController,
@@ -136,7 +156,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
                   ),
                 ),
               ),
-              // Location strip
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -154,81 +173,78 @@ class _VCalendarPageState extends State<VCalendarPage> {
                   ),
                 ),
               ),
-              // Show selected date and booking details
-              _selectedDate != null
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Text(
-                            '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16),
-                          ),
+              if (_selectedDate != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Text(
+                          '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3A59), fontSize: 16),
                         ),
-                        if (_bookingsForSelectedDate != null &&
-                            _bookingsForSelectedDate!.length == 1 &&
-                            _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[
-                          const Text(
-                            'PUBLIC HOLIDAY',
-                            style: TextStyle(color: kHoliday, fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ] else if (_bookingsForSelectedDate != null) ...[
-                          ..._bookingsForSelectedDate!.map((b) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: kBorder),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          if ((b['plate'] ?? '').isNotEmpty)
-                                            Text(b['plate'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                          const SizedBox(height: 6),
-                                          Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                          const SizedBox(height: 4),
-                                          Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
-                                          const SizedBox(height: 6),
-                                          if (b['time'] != null && b['time']!.isNotEmpty)
-                                            Text(b['time']!, style: const TextStyle(color: Colors.black87)),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: b['status'] == 'APPROVED'
-                                            ? kApproved
-                                            : b['status'] == 'PENDING'
-                                                ? kPending
-                                                : kHoliday,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                    )
-                                  ],
-                                ),
+                      ),
+                      if (_bookingsForSelectedDate != null &&
+                          _bookingsForSelectedDate!.length == 1 &&
+                          _bookingsForSelectedDate!.first['status'] == 'HOLIDAY') ...[
+                        const Text(
+                          'PUBLIC HOLIDAY',
+                          style: TextStyle(color: kWarning, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ] else if (_bookingsForSelectedDate != null) ...[
+                        ..._bookingsForSelectedDate!.map((b) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: kBorder),
                               ),
-                            );
-                          }).toList(),
-                        ] else ...[
-                          const Text('No bookings for this date', style: TextStyle(color: Colors.black54)),
-                        ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if ((b['plate'] ?? '').isNotEmpty)
+                                          Text(b['plate'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        const SizedBox(height: 6),
+                                        Text(b['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 4),
+                                        Text(b['department'] ?? '', style: const TextStyle(color: Colors.black54)),
+                                        const SizedBox(height: 6),
+                                        if (b['time'] != null && b['time']!.isNotEmpty)
+                                          Text(b['time']!, style: const TextStyle(color: Colors.black87)),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      // CHANGED: Using the _statusColor helper for consistency
+                                      color: _statusColor(b['status'] ?? ''),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(b['status'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  )
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ] else ...[
+                        const Text('No bookings for this date', style: TextStyle(color: Colors.black54)),
                       ],
-                    ),
-                  )
-                : Container(),
+                    ],
+                  ),
+                )
+              else
+                Container(),
             ],
           ),
         ),
@@ -244,15 +260,14 @@ class _VCalendarPageState extends State<VCalendarPage> {
           if (i == 0) {
             // Summary - on this page already
           } else if (i == 1) {
-            // Navigate to VBookingPage (Booked Vehicle)
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
           } else if (i == 2) {
-            // Navigate to MyBookingPage
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyBookingPage()));
           }
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: kPrimaryDark,
+        // CHANGED: Using the guideline color
+        backgroundColor: kPrimaryColor,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
@@ -271,7 +286,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
       children: [
         IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          color: kPrimaryDark,
+          // CHANGED: Using the guideline color
+          color: kPrimaryColor,
           onPressed: () {
             if (_pageController.hasClients) {
               _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
@@ -281,7 +297,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
         Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3A59))),
         IconButton(
           icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-          color: kPrimaryDark,
+          // CHANGED: Using the guideline color
+          color: kPrimaryColor,
           onPressed: () {
             if (_pageController.hasClients) {
               _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
@@ -313,8 +330,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
 
   Widget _monthGrid(DateTime month) {
     final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7; // Sun=0
-    final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7; // full weeks
+    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
+    final totalCells = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7;
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -333,9 +350,12 @@ class _VCalendarPageState extends State<VCalendarPage> {
             && _selectedDate!.day == day;
 
         final bookingsForDay = bookingsByDay[day];
-        final isHoliday = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'HOLIDAY');
-        final isApproved = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'APPROVED');
-        final isPending = bookingsForDay != null && bookingsForDay.any((b) => (b['status'] ?? '') == 'PENDING');
+        // UPDATED: Added checks for new statuses
+        final isHoliday = bookingsForDay?.any((b) => (b['status'] ?? '') == 'HOLIDAY') ?? false;
+        final isApproved = bookingsForDay?.any((b) => (b['status'] ?? '') == 'APPROVED') ?? false;
+        final isPending = bookingsForDay?.any((b) => (b['status'] ?? '') == 'PENDING') ?? false;
+        final isComplete = bookingsForDay?.any((b) => (b['status'] ?? '') == 'COMPLETE') ?? false;
+        final isRejected = bookingsForDay?.any((b) => (b['status'] ?? '') == 'REJECTED') ?? false;
 
         Color backgroundColor = Colors.transparent;
         Color borderColor = kBorder;
@@ -343,20 +363,21 @@ class _VCalendarPageState extends State<VCalendarPage> {
         Color textColor = const Color(0xFF2E3A59);
 
         if (isSelected) {
-          backgroundColor = kPrimaryDark;
-          borderColor = kPrimaryDark;
+          backgroundColor = kPrimaryColor;
+          borderColor = kPrimaryColor;
           borderWidth = 1.25;
           textColor = Colors.white;
         } else if (isHoliday) {
-          backgroundColor = Colors.transparent;
-          borderColor = kHoliday;
+          borderColor = kWarning;
           borderWidth = 2.6;
-          textColor = const Color(0xFF2E3A59);
-        } else if (isApproved || isPending) {
-          backgroundColor = Colors.transparent;
-          borderColor = isApproved ? kApproved : kPending;
+        } 
+        // UPDATED: Logic now includes Complete and Rejected, matching MyBooking.dart
+        else if (isApproved || isPending || isComplete) {
+          borderColor = isApproved ? kApproved : isPending ? kPending : kComplete;
           borderWidth = 2.6;
-          textColor = const Color(0xFF2E3A59);
+        } else if (isRejected) {
+          borderColor = kWarning; // Use the same warning color for rejected
+          borderWidth = 2.6;
         }
 
         return GestureDetector(
@@ -381,33 +402,26 @@ class _VCalendarPageState extends State<VCalendarPage> {
     );
   }
 
-  // Method to calculate calendar height
-double _calendarHeightForPage(BuildContext context, {bool compact = false}) {
-  final month = _monthForPage(_pageController.hasClients ? _pageController.page?.round() ?? 120 : 120);
-  final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-  final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7; // Sun=0
-  final rows = ((firstWeekday + daysInMonth + 6) ~/ 7);
+  double _calendarHeightForPage(BuildContext context, {bool compact = false}) {
+    final month = _monthForPage(_pageController.hasClients ? _pageController.page?.round() ?? 120 : 120);
+    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
+    final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
+    final rows = ((firstWeekday + daysInMonth + 6) ~/ 7);
 
-  final screenW = MediaQuery.of(context).size.width;
-  final availableWidth = screenW - 48; // container horizontal padding & margins
-  final totalCrossSpacing = 8.0 * (7 - 1);
-  final cellWidth = (availableWidth - totalCrossSpacing) / 7.0;
+    final screenW = MediaQuery.of(context).size.width;
+    final availableWidth = screenW - 48;
+    final totalCrossSpacing = 8.0 * (7 - 1);
+    final cellWidth = (availableWidth - totalCrossSpacing) / 7.0;
+    final cellHeight = cellWidth * 0.87;
 
-  // Make the cells taller to show all data
-  final cellHeight = cellWidth * 0.87; // Increase this multiplier to make cells larger
+    final headerHeight = compact ? 40.0 : 44.0;
+    final weekHeaderHeight = compact ? 24.0 : 28.0;
+    final verticalGaps = (compact ? 6.0 : 8.0) + (compact ? 6.0 : 8.0);
+    final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
+    final containerVerticalPadding = 16.0 + 20.0;
+    final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing + containerVerticalPadding + 6.0;
 
-  final headerHeight = compact ? 40.0 : 44.0;
-  final weekHeaderHeight = compact ? 24.0 : 28.0;
-  final verticalGaps = (compact ? 6.0 : 8.0) + (compact ? 6.0 : 8.0);
-  final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
-  final containerVerticalPadding = 16.0 + 20.0;
-
-  // Total height including header, grid, and padding
-  final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing + containerVerticalPadding + 6.0;
-
-  // Ensure the height does not exceed a reasonable limit
-  final maxHeight = 480.0;  // Adjust as needed
-  return totalHeight.clamp(300.0, maxHeight);  // Adjust for the proper fit
-}
-
+    final maxHeight = 480.0;
+    return totalHeight.clamp(300.0, maxHeight);
+  }
 }
