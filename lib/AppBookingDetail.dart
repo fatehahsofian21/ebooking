@@ -46,7 +46,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     'pickupLocation': 'PERKESO HQ, Jalan Ampang',
     'returnLocation': 'PERKESO HQ, Jalan Ampang',
     'pax': 3,
-    // --- MODIFIED: Set to false to test the simple approve flow ---
     'requireDriver': true, 
     'purpose': 'Official meeting with Telekom Malaysia for project discussion.',
     'uploadedDocName': 'meeting_invitation.pdf',
@@ -67,6 +66,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
             child: TextFormField(
               controller: reasonController,
               autofocus: true,
+              // --- MODIFIED: Makes the text field larger ---
+              maxLines: 3, 
               decoration: const InputDecoration(
                 labelText: 'Reason for Rejection',
                 hintText: 'e.g., Vehicle unavailable',
@@ -156,7 +157,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         },
       );
     } else {
-      // --- This block will now be executed on "Approve" ---
       _showConfirmationDialog(
         title: 'Booking Approved',
         content: 'The booking has been successfully approved.',
@@ -342,31 +342,9 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
   List<Map<String, dynamic>>? _bookingsForSelectedDateSuper;
   
   final Map<int, List<Map<String, dynamic>>> bookingsByDaySuper = {
-    5: [
-      {
-        'requester': 'Shera',
-        'department': 'Engineering',
-        'model': 'Toyota Vellfire',
-        'plate': 'WPC1234',
-        'time': '10:00 AM – 3:00 PM',
-        'status': 'APPROVED',
-        'purpose': 'Client meeting at KL Sentral'
-      }
-    ],
-    21: [
-      {
-        'requester': 'Aiman',
-        'department': 'BST',
-        'model': 'Isuzu Bus',
-        'plate': 'BNM1234',
-        'time': '9:00 AM – 5:00 PM',
-        'status': 'APPROVED',
-        'purpose': 'Team building event at Port Dickson'
-      }
-    ],
-    25: [
-      {'name': 'PUBLIC HOLIDAY', 'status': 'HOLIDAY'}
-    ],
+    5: [{'requester': 'Shera', 'department': 'Engineering', 'model': 'Toyota Vellfire', 'plate': 'WPC1234', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'purpose': 'Client meeting at KL Sentral'}],
+    21: [{'requester': 'Aiman', 'department': 'BST', 'model': 'Isuzu Bus', 'plate': 'BNM1234', 'time': '9:00 AM – 5:00 PM', 'status': 'APPROVED', 'purpose': 'Team building event at Port Dickson'}],
+    25: [{'name': 'PUBLIC HOLIDAY', 'status': 'HOLIDAY'}],
   };
 
   DateTime _monthForPage(int page) => DateTime(_baseMonth.year, _baseMonth.month + (page - 120), 1);
@@ -422,15 +400,9 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: kPrimaryColor),
-          onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut),
-        ),
+        IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: kPrimaryColor), onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut)),
         Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryDarkColor)),
-        IconButton(
-          icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: kPrimaryColor),
-          onPressed: () => _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut),
-        ),
+        IconButton(icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: kPrimaryColor), onPressed: () => _pageController.nextPage(duration: const Duration(milliseconds: 200), curve: Curves.easeOut)),
       ],
     );
   }
@@ -454,27 +426,17 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
       itemBuilder: (_, i) {
         final day = i - firstWeekday + 1;
         if (day < 1 || day > daysInMonth) return const SizedBox();
-
         final isSelected = _selectedDateSuper?.day == day && _selectedDateSuper?.month == month.month;
         final bookingsForDay = bookingsByDaySuper[day];
         final isHoliday = bookingsForDay?.any((b) => b['status'] == 'HOLIDAY') ?? false;
         final isApproved = bookingsForDay?.any((b) => b['status'] == 'APPROVED') ?? false;
-
         Color borderColor = kBorder;
-        if (isHoliday) {
-          borderColor = kWarning;
-        } else if (isApproved) {
-          borderColor = kPrimaryColor;
-        }
-        
+        if (isHoliday) borderColor = kWarning;
+        else if (isApproved) borderColor = kPrimaryColor;
         return GestureDetector(
           onTap: () => _onDateTappedSuper(month, day),
           child: Container(
-            decoration: BoxDecoration(
-              color: isSelected ? kPrimaryColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderColor, width: isHoliday || isApproved ? 2.0 : 1.0),
-            ),
+            decoration: BoxDecoration(color: isSelected ? kPrimaryColor : Colors.transparent, borderRadius: BorderRadius.circular(8), border: Border.all(color: borderColor, width: isHoliday || isApproved ? 2.0 : 1.0)),
             alignment: Alignment.center,
             child: Text('$day', style: TextStyle(color: isSelected ? Colors.white : kPrimaryDarkColor, fontWeight: FontWeight.w700)),
           ),
@@ -484,26 +446,15 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
   }
 
   Widget _buildSuperCalendarDetails() {
-    if (_selectedDateSuper == null) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(child: Text("Select a date to see details", style: TextStyle(color: Colors.grey))),
-      );
-    }
-    
+    if (_selectedDateSuper == null) return const Padding(padding: EdgeInsets.all(16.0), child: Center(child: Text("Select a date to see details", style: TextStyle(color: Colors.grey))));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Column(
         children: [
-          Text(
-            '${_selectedDateSuper?.day}/${_selectedDateSuper?.month}/${_selectedDateSuper?.year}',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: kPrimaryDarkColor, fontSize: 16),
-          ),
+          Text('${_selectedDateSuper?.day}/${_selectedDateSuper?.month}/${_selectedDateSuper?.year}', style: const TextStyle(fontWeight: FontWeight.bold, color: kPrimaryDarkColor, fontSize: 16)),
           const SizedBox(height: 10),
-          if (_bookingsForSelectedDateSuper != null)
-            ..._bookingsForSelectedDateSuper!.map((b) => _buildBookingDetailCard(b))
-          else
-            const Text('No bookings for this date', style: TextStyle(color: Colors.black54)),
+          if (_bookingsForSelectedDateSuper != null) ..._bookingsForSelectedDateSuper!.map((b) => _buildBookingDetailCard(b))
+          else const Text('No bookings for this date', style: TextStyle(color: Colors.black54)),
         ],
       ),
     );
@@ -511,41 +462,18 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
 
   Widget _buildBookingDetailCard(Map<String, dynamic> booking) {
     final status = booking['status'] as String?;
-
-    if (status == 'HOLIDAY') {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBorder),
-        ),
-        child: Center(
-          child: Text(
-            booking['name'] as String? ?? 'Public Holiday',
-            style: const TextStyle(color: kWarning, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ),
-      );
-    }
-
+    if (status == 'HOLIDAY') return Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: kBorder)), child: Center(child: Text(booking['name'] as String? ?? 'Public Holiday', style: const TextStyle(color: kWarning, fontWeight: FontWeight.bold, fontSize: 16))));
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBorder)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: kBorder)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                booking['model'] as String? ?? 'N/A',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimaryDarkColor),
-              ),
+              Text(booking['model'] as String? ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimaryDarkColor)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: _statusColor(status ?? ''), borderRadius: BorderRadius.circular(12)),
@@ -576,12 +504,7 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
               TextSpan(
                 text: '$title ',
                 style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold),
-                children: [
-                  TextSpan(
-                    text: value,
-                    style: const TextStyle(color: kPrimaryDarkColor, fontWeight: FontWeight.normal),
-                  ),
-                ],
+                children: [TextSpan(text: value, style: const TextStyle(color: kPrimaryDarkColor, fontWeight: FontWeight.normal))],
               ),
             ),
           ),
