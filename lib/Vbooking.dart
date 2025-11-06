@@ -9,6 +9,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 const Color kPrimaryColor = Color(0xFF007DC5); // PERKESO's primary blue
 const Color kBackgroundColor = Color(0xFFF5F5F5); // Standard light gray background
 
+// ---
+// --- IMPORTANT: REPLACE THIS WITH YOUR ACTUAL GOOGLE MAPS API KEY ---
+// ---
+// You must enable "Places API" and "Maps SDK for Android/iOS" in your Google Cloud Console.
+const String kGoogleMapsApiKey = 'AIzaSyCARTrKnNBreG5gSj6ObaatLEaxZ9a0rek';
+
+
 class VBookingPage extends StatefulWidget {
   const VBookingPage({super.key});
 
@@ -35,7 +42,6 @@ class _VBookingPageState extends State<VBookingPage> {
   final TextEditingController _pickupLocationController = TextEditingController();
   final TextEditingController _returnLocationController = TextEditingController();
   final TextEditingController _destinationController = TextEditingController();
-  // NEW: Controller for the pax input field
   final TextEditingController _paxController = TextEditingController();
 
   DateTime? _pickupDateTime;
@@ -45,8 +51,6 @@ class _VBookingPageState extends State<VBookingPage> {
   bool _requireDriver = false;
   String? _uploadedDocName;
   String? _purpose;
-
-  static const String _kGoogleMapsApiKey = 'YOUR_API_KEY_HERE';
 
   String? _selectedVehicleTypeName() {
     if (_selectedVehicleType == null) return null;
@@ -82,7 +86,6 @@ class _VBookingPageState extends State<VBookingPage> {
     }
   }
 
-  // NEW: Initialize the controller's text in initState
   @override
   void initState() {
     super.initState();
@@ -94,7 +97,7 @@ class _VBookingPageState extends State<VBookingPage> {
     _pickupLocationController.dispose();
     _returnLocationController.dispose();
     _destinationController.dispose();
-    _paxController.dispose(); // NEW: Dispose the pax controller
+    _paxController.dispose();
     super.dispose();
   }
 
@@ -169,7 +172,6 @@ class _VBookingPageState extends State<VBookingPage> {
                     children: [
                       const Text('Pax *:', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
                       const SizedBox(width: 8),
-                      // UPDATED: This widget now allows text input
                       _buildPaxControl(),
                     ],
                   ),
@@ -199,8 +201,6 @@ class _VBookingPageState extends State<VBookingPage> {
                 style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 16),
-
-              // ... (rest of the build method remains the same)
               const Text('Destination *', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
               const SizedBox(height: 8),
               TextField(
@@ -255,7 +255,6 @@ class _VBookingPageState extends State<VBookingPage> {
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
                     onPressed: () async {
-                      // Mock file picker logic remains the same
                       final source = await showModalBottomSheet<String?>(context: context, builder: (ctx) {
                         return SafeArea(
                           child: Column(
@@ -420,7 +419,6 @@ class _VBookingPageState extends State<VBookingPage> {
     );
   }
 
-  // REFINED: This widget now includes a TextField for direct input.
   Widget _buildPaxControl() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -431,29 +429,25 @@ class _VBookingPageState extends State<VBookingPage> {
             onPressed: () {
               setState(() {
                 _pax = (_pax > 1) ? _pax - 1 : 1;
-                // Sync controller with the new value
                 _paxController.text = _pax.toString();
               });
             },
             icon: const Icon(Icons.remove, color: kPrimaryColor),
             visualDensity: VisualDensity.compact,
           ),
-          // NEW: TextField for direct user input
           SizedBox(
             width: 40,
             child: TextField(
               controller: _paxController,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
-              // Only allow digits
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                border: InputBorder.none, // Hide the underline
+                border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               onChanged: (value) {
-                // Update the internal _pax variable when user types
                 setState(() {
                   _pax = int.tryParse(value) ?? 1;
                 });
@@ -471,7 +465,6 @@ class _VBookingPageState extends State<VBookingPage> {
               }
               setState(() {
                 _pax = _pax + 1;
-                // Sync controller with the new value
                 _paxController.text = _pax.toString();
               });
             },
@@ -605,7 +598,7 @@ class _VBookingPageState extends State<VBookingPage> {
   }
 }
 
-// --- Map Picker Page (Remains the same) ---
+// --- FIXED & REFINED Map Picker Page ---
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
 
@@ -622,7 +615,18 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Timer? _debounce;
   String? _sessionToken;
 
-  static const LatLng _initialCenter = LatLng(3.1390, 101.6869);
+  // --- NEW: State variables for loading and error handling ---
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  static const LatLng _initialCenter = LatLng(3.1576, 101.7122); // Centered on KLCC
+
+  @override
+  void initState() {
+    super.initState();
+    // Create a new session token when the page loads
+    _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
+  }
 
   @override
   void dispose() {
@@ -632,60 +636,102 @@ class _MapPickerPageState extends State<MapPickerPage> {
     super.dispose();
   }
 
+  // --- REFINED: Search function with loading and error handling ---
   Future<void> _searchPlaces(String input) async {
-    if (input.trim().isEmpty) return;
-    _sessionToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-    final biasLat = _selectedMarker?.position.latitude ?? _initialCenter.latitude;
-    final biasLng = _selectedMarker?.position.longitude ?? _initialCenter.longitude;
-    final locationBias = 'circle:20000@${biasLat},${biasLng}';
-    final url = Uri.parse('https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${Uri.encodeQueryComponent(input)}&key=${_VBookingPageState._kGoogleMapsApiKey}&sessiontoken=${_sessionToken}&locationbias=${Uri.encodeQueryComponent(locationBias)}');
-    final resp = await http.get(url);
-    if (resp.statusCode != 200) return;
-    final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
-    final preds = (jsonResp['predictions'] as List<dynamic>?) ?? [];
+    if (input.trim().length < 2) {
+      setState(() => _predictions = []);
+      return;
+    }
+
     setState(() {
-      _predictions = preds.map((p) {
-        final s = p as Map<String, dynamic>;
-        final structured = s['structured_formatting'] as Map<String, dynamic>?;
-        final primary = structured?['main_text'] as String? ?? (s['description'] as String? ?? '');
-        final secondary = structured?['secondary_text'] as String? ?? '';
-        return {
-          'description': s['description'] as String? ?? primary,
-          'place_id': s['place_id'] as String? ?? '',
-          'primary': primary,
-          'secondary': secondary,
-        };
-      }).toList();
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final biasLat = _selectedMarker?.position.latitude ?? _initialCenter.latitude;
+      final biasLng = _selectedMarker?.position.longitude ?? _initialCenter.longitude;
+      final locationBias = 'circle:20000@$biasLat,$biasLng';
+      final url = Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${Uri.encodeQueryComponent(input)}&key=$kGoogleMapsApiKey&sessiontoken=$_sessionToken&locationbias=${Uri.encodeQueryComponent(locationBias)}&components=country:MY');
+      
+      final resp = await http.get(url).timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200) {
+        final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
+        final status = jsonResp['status'] as String?;
+        if (status == 'OK') {
+          final preds = (jsonResp['predictions'] as List<dynamic>?) ?? [];
+          setState(() {
+            _predictions = preds.map((p) {
+              final s = p as Map<String, dynamic>;
+              final structured = s['structured_formatting'] as Map<String, dynamic>?;
+              final primary = structured?['main_text'] as String? ?? (s['description'] as String? ?? '');
+              final secondary = structured?['secondary_text'] as String? ?? '';
+              return {
+                'description': s['description'] as String? ?? primary,
+                'place_id': s['place_id'] as String? ?? '',
+                'primary': primary,
+                'secondary': secondary,
+              };
+            }).toList();
+            if (_predictions.isEmpty) {
+              _errorMessage = 'No results found.';
+            }
+          });
+        } else {
+          // Handle Google API errors (e.g., ZERO_RESULTS, REQUEST_DENIED)
+          _errorMessage = jsonResp['error_message'] ?? 'Error fetching places: $status';
+        }
+      } else {
+        _errorMessage = 'Server error. Please try again.';
+      }
+    } catch (e) {
+      _errorMessage = 'Could not connect. Please check your network.';
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _selectPrediction(Map<String, String> pred) async {
     final placeId = pred['place_id'];
     if (placeId == null || placeId.isEmpty) return;
-    final url = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=${_VBookingPageState._kGoogleMapsApiKey}${_sessionToken != null ? '&sessiontoken=${_sessionToken}' : ''}');
-    final resp = await http.get(url);
-    if (resp.statusCode != 200) return;
-    final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
-    final result = jsonResp['result'] as Map<String, dynamic>?;
-    if (result == null) return;
-    final geometry = result['geometry'] as Map<String, dynamic>?;
-    final location = geometry?['location'] as Map<String, dynamic>?;
-    final lat = (location?['lat'] as num?)?.toDouble() ?? _initialCenter.latitude;
-    final lng = (location?['lng'] as num?)?.toDouble() ?? _initialCenter.longitude;
-    final formatted = result['formatted_address'] as String? ?? pred['description']!;
-    final pos = LatLng(lat, lng);
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(pos, 15));
-    setState(() {
-      _selectedMarker = Marker(markerId: const MarkerId('selected'), position: pos, infoWindow: InfoWindow(title: formatted));
-      _predictions = [];
-      _searchController.text = formatted;
-      _selectedAddress = formatted;
-      _sessionToken = null;
-    });
+    
+    // Invalidate session token after use
+    final currentSessionToken = _sessionToken;
+    _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$kGoogleMapsApiKey&sessiontoken=$currentSessionToken');
+    
+    try {
+      final resp = await http.get(url);
+      if (resp.statusCode != 200) return;
+      final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
+      final result = jsonResp['result'] as Map<String, dynamic>?;
+      if (result == null) return;
+      final geometry = result['geometry'] as Map<String, dynamic>?;
+      final location = geometry?['location'] as Map<String, dynamic>?;
+      final lat = (location?['lat'] as num?)?.toDouble() ?? _initialCenter.latitude;
+      final lng = (location?['lng'] as num?)?.toDouble() ?? _initialCenter.longitude;
+      final formatted = result['formatted_address'] as String? ?? pred['description']!;
+      final pos = LatLng(lat, lng);
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(pos, 16));
+      setState(() {
+        _selectedMarker = Marker(markerId: const MarkerId('selected'), position: pos, infoWindow: InfoWindow(title: formatted));
+        _predictions = [];
+        _searchController.text = formatted;
+        _selectedAddress = formatted;
+      });
+    } catch (e) {
+      // Handle error
+    }
   }
 
   Future<void> _reverseGeocode(LatLng pos) async {
-    final url = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${pos.latitude},${pos.longitude}&key=${_VBookingPageState._kGoogleMapsApiKey}');
+    final url = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${pos.latitude},${pos.longitude}&key=$kGoogleMapsApiKey');
     final resp = await http.get(url);
     if (resp.statusCode != 200) return;
     final jsonResp = json.decode(resp.body) as Map<String, dynamic>?;
@@ -700,6 +746,48 @@ class _MapPickerPageState extends State<MapPickerPage> {
     });
   }
 
+  // --- REFINED: Body widget that shows loading, errors, results, or the map ---
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade700)),
+        ),
+      );
+    }
+    if (_predictions.isNotEmpty) {
+      return ListView.separated(
+        itemCount: _predictions.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (ctx, i) {
+          final p = _predictions[i];
+          return ListTile(
+            leading: const Icon(Icons.location_on_outlined, color: kPrimaryColor),
+            title: Text(p['primary'] ?? p['description'] ?? ''),
+            subtitle: (p['secondary'] != null && (p['secondary'] ?? '').isNotEmpty) ? Text(p['secondary']!) : null,
+            onTap: () => _selectPrediction(p),
+          );
+        },
+      );
+    }
+    // Default view is the map
+    return GoogleMap(
+      initialCameraPosition: const CameraPosition(target: _initialCenter, zoom: 12),
+      onMapCreated: (c) => _mapController = c,
+      markers: _selectedMarker != null ? {_selectedMarker!} : {},
+      myLocationEnabled: true,
+      myLocationButtonEnabled: true,
+      onTap: (latlng) async {
+        await _reverseGeocode(latlng);
+        _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latlng, 16));
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -712,67 +800,50 @@ class _MapPickerPageState extends State<MapPickerPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(hintText: 'Search places', filled: true, fillColor: Colors.white, border: OutlineInputBorder()),
-                    onChanged: (v) {
-                      _debounce?.cancel();
-                      _debounce = Timer(const Duration(milliseconds: 350), () {
-                        if (v.trim().isEmpty) {
-                          setState(() => _predictions = []);
-                        } else {
-                          _searchPlaces(v);
-                        }
-                      });
-                    },
-                    onSubmitted: (v) => _searchPlaces(v),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
-                  onPressed: () => _searchPlaces(_searchController.text),
-                  child: const Text('Search', style: TextStyle(color: Colors.white)),
-                ),
-              ],
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search places...',
+                filled: true,
+                fillColor: Colors.white,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _predictions = [];
+                      _errorMessage = null;
+                    });
+                  },
+                ) : null
+              ),
+              onChanged: (v) {
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 400), () {
+                  _searchPlaces(v);
+                });
+              },
             ),
           ),
-          if (_predictions.isNotEmpty)
-            Expanded(
-              child: ListView.separated(
-                itemCount: _predictions.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (ctx, i) {
-                  final p = _predictions[i];
-                  return ListTile(
-                    title: Text(p['primary'] ?? p['description'] ?? ''),
-                    subtitle: (p['secondary'] != null && (p['secondary'] ?? '').isNotEmpty) ? Text(p['secondary']!) : null,
-                    onTap: () => _selectPrediction(p),
-                  );
-                },
-              ),
-            )
-          else
-            Expanded(
-              child: GoogleMap(
-                initialCameraPosition: const CameraPosition(target: _initialCenter, zoom: 12),
-                onMapCreated: (c) => _mapController = c,
-                markers: _selectedMarker != null ? {_selectedMarker!} : {},
-                myLocationEnabled: false,
-                onTap: (latlng) async {
-                  await _reverseGeocode(latlng);
-                  _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latlng, 15));
-                },
-              ),
-            ),
+          // Use the new _buildBody method here
+          Expanded(child: _buildBody()),
+          // The "Select" button only appears after a location has been chosen
           if (_selectedAddress != null)
-            Padding(
+            Container(
               padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2)),
+                ],
+              ),
               child: Row(
                 children: [
+                  const Icon(Icons.location_on, color: kPrimaryColor),
+                  const SizedBox(width: 12),
                   Expanded(child: Text(_selectedAddress!, maxLines: 2, overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 8),
                   ElevatedButton(

@@ -58,13 +58,12 @@ Color _statusColor(String status) {
 }
 
 // =========================================================================
-// BOOKING DETAILS PAGE (REFINED WITH REJECTION REASON)
+// BOOKING DETAILS PAGE (REFINED WITH CONDITIONAL BOOKING ID)
 // =========================================================================
 class BookingDetailsPage extends StatelessWidget {
   final Map<String, dynamic> booking;
   const BookingDetailsPage({super.key, required this.booking});
 
-  // UPDATED: _buildInfoRow now accepts an optional color for the value text
   Widget _buildInfoRow(String title, String? value, {Color valueColor = const Color(0xFF2E3A59)}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -84,7 +83,7 @@ class BookingDetailsPage extends StatelessWidget {
             value ?? 'N/A',
             style: TextStyle(
               fontSize: 16,
-              color: valueColor, // Use the provided color
+              color: valueColor,
             ),
           ),
           const Divider(height: 16),
@@ -380,6 +379,9 @@ class BookingDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // MODIFIED: Store status in a variable for easy access
+    final String status = booking['status'] ?? 'UNKNOWN';
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
@@ -400,7 +402,7 @@ class BookingDetailsPage extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  child: _buildStatusTag(booking['status'] ?? 'UNKNOWN'),
+                  child: _buildStatusTag(status),
                 ),
               ),
               Container(
@@ -417,6 +419,11 @@ class BookingDetailsPage extends StatelessWidget {
                   children: [
                     const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
                     const SizedBox(height: 16),
+                    
+                    // --- MODIFIED: Conditionally show Booking ID ---
+                    if (status == 'APPROVED' || status == 'COMPLETE')
+                      _buildInfoRow('Booking ID', booking['id'] ?? 'N/A'),
+                      
                     _buildInfoRow('Vehicle Type', '${booking['vehicle'] ?? 'N/A'} (${booking['model'] ?? 'N/A'})'),
                     _buildInfoRow('Plate Number', booking['plate'] ?? 'N/A'),
                     _buildInfoRow('Pick-Up Date & Time', _formatDateTime(booking['pickupDate'])),
@@ -428,8 +435,7 @@ class BookingDetailsPage extends StatelessWidget {
                     _buildInfoRow('Return Location', booking['returnLocation']),
                     _buildInfoRow('Purpose of Booking', booking['purpose']),
                     _buildInfoRow('Supported Document', booking['uploadedDocName'] ?? 'No document uploaded'),
-                    // NEW: Conditionally show the rejection reason in red
-                    if (booking['status'] == 'REJECTED' && booking['rejectionReason'] != null)
+                    if (status == 'REJECTED' && booking['rejectionReason'] != null)
                       _buildInfoRow('Rejection Reason', booking['rejectionReason'], valueColor: kWarning),
                   ],
                 ),
@@ -444,8 +450,9 @@ class BookingDetailsPage extends StatelessWidget {
   }
 }
 
+
 // =========================================================================
-// MY BOOKING PAGE (REFINED WITH COLORS AND REJECTION REASON)
+// MY BOOKING PAGE (REMAINS UNCHANGED)
 // =========================================================================
 class MyBookingPage extends StatefulWidget {
   const MyBookingPage({super.key});
@@ -457,15 +464,14 @@ class _MyBookingPageState extends State<MyBookingPage> {
   final PageController _pageController = PageController(initialPage: 120);
   DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
-  // UPDATED: Added a rejection reason to the demo data
   final List<Map<String, dynamic>> _bookings = [
-    {'id': '1', 'vehicle': 'Car', 'plate': 'WPC1234', 'status': 'PENDING', 'pickupDate': '2025-10-05 10:00', 'returnDate': '2025-10-05 14:00', 'model': 'Toyota Vios', 'pax': 2, 'requireDriver': true, 'destination': 'Kuala Lumpur Convention Centre', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Official meeting with stakeholders.', 'uploadedDocName': 'meeting_req.pdf'},
-    {'id': '2', 'vehicle': 'Van', 'plate': 'VAN9988', 'status': 'APPROVED', 'pickupDate': '2025-10-09 14:00', 'returnDate': '2025-10-09 17:00', 'model': 'Toyota Hiace', 'pax': 5, 'requireDriver': false, 'destination': 'Klang Valley Site A', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'Klang Valley Site A', 'purpose': 'Site inspection and survey.', 'uploadedDocName': null},
-    {'id': '3', 'vehicle': 'Bus', 'plate': 'BUS1122', 'status': 'APPROVED', 'pickupDate': '2025-10-14 09:00', 'returnDate': '2025-10-14 13:00', 'model': 'Isuzu Bus', 'pax': 20, 'requireDriver': true, 'destination': 'Penang Bridge', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Outstation team building trip.', 'uploadedDocName': 'approval_letter.pdf'},
-    {'id': '4', 'vehicle': 'Car', 'plate': 'CAR7788', 'status': 'PENDING', 'pickupDate': '2025-10-14 14:00', 'returnDate': '2025-10-14 16:00', 'model': 'Proton Persona', 'pax': 1, 'requireDriver': false, 'destination': 'Putrajaya Office', 'pickupLocation': 'Putrajaya Office', 'returnLocation': 'Putrajaya Office', 'purpose': 'Urgent document delivery.', 'uploadedDocName': null},
-    {'id': '5', 'vehicle': '', 'plate': '', 'status': 'HOLIDAY', 'pickupDate': '2025-10-25 00:00', 'returnDate': '2025-10-25 00:00', 'name': 'PUBLIC HOLIDAY', 'model': null, 'pax': 0, 'requireDriver': false, 'destination': null, 'pickupLocation': null, 'returnLocation': null, 'purpose': null, 'uploadedDocName': null},
-    {'id': '6', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit for project handover.', 'uploadedDocName': null},
-    {'id': '7', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf', 'rejectionReason': 'Vehicle unavailable due to scheduled maintenance.'},
+    {'id': 'BK-001', 'vehicle': 'Car', 'plate': 'WPC1234', 'status': 'PENDING', 'pickupDate': '2025-10-05 10:00', 'returnDate': '2025-10-05 14:00', 'model': 'Toyota Vios', 'pax': 2, 'requireDriver': true, 'destination': 'Kuala Lumpur Convention Centre', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Official meeting with stakeholders.', 'uploadedDocName': 'meeting_req.pdf'},
+    {'id': 'BK-002', 'vehicle': 'Van', 'plate': 'VAN9988', 'status': 'APPROVED', 'pickupDate': '2025-10-09 14:00', 'returnDate': '2025-10-09 17:00', 'model': 'Toyota Hiace', 'pax': 5, 'requireDriver': false, 'destination': 'Klang Valley Site A', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'Klang Valley Site A', 'purpose': 'Site inspection and survey.', 'uploadedDocName': null},
+    {'id': 'BK-003', 'vehicle': 'Bus', 'plate': 'BUS1122', 'status': 'APPROVED', 'pickupDate': '2025-10-14 09:00', 'returnDate': '2025-10-14 13:00', 'model': 'Isuzu Bus', 'pax': 20, 'requireDriver': true, 'destination': 'Penang Bridge', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Outstation team building trip.', 'uploadedDocName': 'approval_letter.pdf'},
+    {'id': 'BK-004', 'vehicle': 'Car', 'plate': 'CAR7788', 'status': 'PENDING', 'pickupDate': '2025-10-14 14:00', 'returnDate': '2025-10-14 16:00', 'model': 'Proton Persona', 'pax': 1, 'requireDriver': false, 'destination': 'Putrajaya Office', 'pickupLocation': 'Putrajaya Office', 'returnLocation': 'Putrajaya Office', 'purpose': 'Urgent document delivery.', 'uploadedDocName': null},
+    {'id': 'BK-005', 'vehicle': '', 'plate': '', 'status': 'HOLIDAY', 'pickupDate': '2025-10-25 00:00', 'returnDate': '2025-10-25 00:00', 'name': 'PUBLIC HOLIDAY', 'model': null, 'pax': 0, 'requireDriver': false, 'destination': null, 'pickupLocation': null, 'returnLocation': null, 'purpose': null, 'uploadedDocName': null},
+    {'id': 'BK-006', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit for project handover.', 'uploadedDocName': null},
+    {'id': 'BK-007', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf', 'rejectionReason': 'Vehicle unavailable due to scheduled maintenance.'},
   ];
 
   final Map<int, List<Map<String, dynamic>>> bookingsByDay = {};
@@ -520,7 +526,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        // RESTORED: Using the primary guideline color
         backgroundColor: kPrimaryColor,
         elevation: 0,
         leading: IconButton(
@@ -604,7 +609,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
                                                   Text(
                                                       '${_formatTime(b['pickupDate'])} - ${_formatTime(b['returnDate'])}',
                                                       style: const TextStyle(color: Colors.black87)),
-                                                // NEW: Conditionally display rejection reason in the card
                                                 if (b['status'] == 'REJECTED' && b['rejectionReason'] != null) ...[
                                                   const SizedBox(height: 6),
                                                   Text(
@@ -650,7 +654,6 @@ class _MyBookingPageState extends State<MyBookingPage> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        // RESTORED: Using the primary guideline color
         backgroundColor: kPrimaryColor,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,

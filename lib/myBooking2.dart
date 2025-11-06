@@ -324,6 +324,9 @@ class BookingDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // MODIFIED: Get status for easier reference
+    final String status = booking['status'] ?? 'UNKNOWN';
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
@@ -344,7 +347,7 @@ class BookingDetailsPage extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  child: _buildStatusTag(booking['status'] ?? 'UNKNOWN'),
+                  child: _buildStatusTag(status),
                 ),
               ),
               Container(
@@ -361,6 +364,11 @@ class BookingDetailsPage extends StatelessWidget {
                   children: [
                     const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
                     const SizedBox(height: 16),
+                    
+                    // --- MODIFIED: Conditionally display Booking ID ---
+                    if (status == 'APPROVED' || status == 'COMPLETE')
+                      _buildInfoRow('Booking ID', booking['id'] ?? 'N/A'),
+                      
                     _buildInfoRow('Vehicle Type', '${booking['vehicle'] ?? 'N/A'} (${booking['model'] ?? 'N/A'})'),
                     _buildInfoRow('Plate Number', booking['plate'] ?? 'N/A'),
                     _buildInfoRow('Pick-Up Date & Time', _formatDateTime(booking['pickupDate'])),
@@ -372,7 +380,7 @@ class BookingDetailsPage extends StatelessWidget {
                     _buildInfoRow('Return Location', booking['returnLocation']),
                     _buildInfoRow('Purpose of Booking', booking['purpose']),
                     _buildInfoRow('Supported Document', booking['uploadedDocName'] ?? 'No document uploaded'),
-                    if (booking['status'] == 'REJECTED' && booking['rejectionReason'] != null)
+                    if (status == 'REJECTED' && booking['rejectionReason'] != null)
                       _buildInfoRow('Rejection Reason', booking['rejectionReason'], valueColor: kWarning),
                   ],
                 ),
@@ -388,7 +396,7 @@ class BookingDetailsPage extends StatelessWidget {
 }
 
 // =========================================================================
-// MAIN PAGE: MyBooking2Page (REFINED)
+// MAIN PAGE: MyBooking2Page (REMAINS UNCHANGED)
 // =========================================================================
 class MyBooking2Page extends StatefulWidget {
   const MyBooking2Page({super.key});

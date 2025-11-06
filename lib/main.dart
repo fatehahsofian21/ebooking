@@ -1,8 +1,8 @@
-// main.dart (Keyboard Behavior Fixed)
-
 import 'package:flutter/material.dart';
 import 'package:ibooking/dashboard.dart';
 import 'package:ibooking/myBooking.dart';
+// --- CHANGE: Added import for the new Approver Dashboard Screen ---
+import 'package:ibooking/AppDash.dart';
 
 // --- Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5); // Primary Blue
@@ -48,6 +48,8 @@ class IBookingApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/dashboard': (context) => const DashboardScreen(),
         '/myBookingPage': (context) => MyBookingPage(),
+        // --- CHANGE: Added the route for the Approver Dashboard ---
+        '/appdash': (context) => const AppDash(),
       },
     );
   }
@@ -120,19 +122,37 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
   String? errorMessage;
 
-  final String correctEmail = "fatehah.sofian@perkeso.gov.my";
-  final String correctPassword = "fatehah2102_";
-
   void _handleLogin(BuildContext context) {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    if (email == correctEmail && password == correctPassword) {
+    // --- CHANGE: Renamed variables from "admin" to "approver" ---
+    // Approver user credentials
+    const String approverEmail = "approver@perkeso.gov.my";
+    const String approverPassword = "1234";
+
+    // Regular user credentials
+    const String correctEmail = "user@perkeso.gov.my";
+    const String correctPassword = "1234";
+
+    // Check for approver credentials first
+    if (email == approverEmail && password == approverPassword) {
       setState(() => errorMessage = null);
       if (!mounted) return;
+      // Navigate to the Approver Dashboard
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/appdash', (route) => false);
+    }
+    // Then, check for regular user credentials
+    else if (email == correctEmail && password == correctPassword) {
+      setState(() => errorMessage = null);
+      if (!mounted) return;
+      // Navigate to the standard Dashboard
       Navigator.of(context)
           .pushNamedAndRemoveUntil('/dashboard', (route) => false);
-    } else {
+    }
+    // If neither matches, show an error
+    else {
       setState(() {
         errorMessage = "Email or password entered is incorrect.";
       });
@@ -161,14 +181,10 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
-      // --- THIS IS THE ONLY CHANGE ---
-      resizeToAvoidBottomInset: false, // Prevents the page from resizing
-      // -------------------------------
+      resizeToAvoidBottomInset: false,
       backgroundColor: kBackgroundColor,
-      // Using a Stack to layer the waves behind the content
       body: Stack(
         children: [
-          // --- START: Wavy Background Decoration ---
           Positioned(
             top: 0,
             left: 0,
@@ -176,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
             child: ClipPath(
               clipper: TopWaveClipper(),
               child: Container(
-                height: screenHeight * 0.15, // Adjust height as needed
+                height: screenHeight * 0.15,
                 color: const Color.fromARGB(255, 182, 224, 230),
               ),
             ),
@@ -188,14 +204,11 @@ class _LoginPageState extends State<LoginPage> {
             child: ClipPath(
               clipper: BottomWaveClipper(),
               child: Container(
-                height: screenHeight * 0.13, // Adjust height as needed
+                height: screenHeight * 0.13,
                  color: const Color.fromARGB(255, 182, 224, 230),
               ),
             ),
           ),
-          // --- END: Wavy Background Decoration ---
-
-          // --- Your Original Login Form Content ---
           Center(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -311,7 +324,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// GradientButton remains unchanged from your original design
 class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;

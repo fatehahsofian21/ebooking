@@ -8,11 +8,10 @@ const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
 const Color kBackgroundColor = Color(0xFFF5F5F5);   // Standard light gray background
 const Color kApproved = Color(0xFF007DC5);     // Blue (matches primary)
 const Color kPending = Color(0xFFF39F21);     // Mustard yellow
-const Color kWarning = Color(0xFFA82525);     // Red for rejected/canceled/errors
-const Color kComplete = Color(0xFF2ECC71);    // Green for complete status
+const Color kWarning = Color(0xFFA82525);     // Red for holiday/canceled/errors
 const Color kBorder = Color(0xFFCFD6DE);
 
-// --- NEW: Helper function to determine status color, same as in MyBooking.dart ---
+// --- MODIFIED: Helper function simplified to handle only required statuses ---
 Color _statusColor(String status) {
   switch (status) {
     case 'PENDING':
@@ -21,12 +20,7 @@ Color _statusColor(String status) {
       return kApproved;
     case 'HOLIDAY':
       return kWarning;
-    case 'COMPLETE':
-      return kComplete;
-    case 'REJECTED':
-      return kWarning;
-    case 'CANCELED':
-      return kWarning;
+    // 'REJECTED' and 'COMPLETE' cases are removed
     default:
       return Colors.grey;
   }
@@ -42,7 +36,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
   final PageController _pageController = PageController(initialPage: 120);
   DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
 
-  // UPDATED: Dummy data now includes all statuses for demonstration
+  // --- MODIFIED: Dummy data now only contains PENDING, APPROVED, and HOLIDAY statuses ---
   final Map<int, List<Map<String, String>>> bookingsByDay = {
     5: [
       {'plate': 'WPC1234', 'name': 'SHERA', 'department': 'Engineering', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'vehicle': 'Car'},
@@ -54,12 +48,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
       {'plate': 'BUS1122', 'name': 'AMIRUL', 'department': 'Admin', 'time': '9:00 AM – 1:00 PM', 'status': 'APPROVED', 'vehicle': 'Bus'},
       {'plate': 'CAR7788', 'name': 'RIZAL', 'department': 'Admin', 'time': '2:00 PM – 4:00 PM', 'status': 'PENDING', 'vehicle': 'Car'},
     ],
-    18: [
-      {'plate': 'REJ1111', 'name': 'DAVID', 'department': 'IT', 'time': '1:00 PM – 2:00 PM', 'status': 'REJECTED', 'vehicle': 'Car'},
-    ],
-    20: [
-      {'plate': 'COM2222', 'name': 'ANNA', 'department': 'Finance', 'time': '9:00 AM – 11:00 AM', 'status': 'COMPLETE', 'vehicle': 'Car'},
-    ],
+    // Day 18 with 'REJECTED' status is removed
+    // Day 20 with 'COMPLETE' status is removed
     25: [
       {'name': 'PUBLIC HOLIDAY', 'department': '', 'time': '', 'status': 'HOLIDAY', 'vehicle': ''},
     ],
@@ -79,7 +69,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
   List<Map<String, String>>? _bookingsForSelectedDate;
 
   int _bottomNavIndex = 0;
-  bool _hasUserSelectedBottomNav = false;
+  // This variable was not used, but it's kept in case you have plans for it.
+  // bool _hasUserSelectedBottomNav = false;
 
   void _onDateTapped(DateTime month, int day) {
     final selectedDate = DateTime(month.year, month.month, day);
@@ -104,10 +95,8 @@ class _VCalendarPageState extends State<VCalendarPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // CHANGED: Using the standard background color
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        // CHANGED: Using the guideline color
         backgroundColor: kPrimaryColor,
         elevation: 0,
         leading: IconButton(
@@ -226,7 +215,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
-                                      // CHANGED: Using the _statusColor helper for consistency
                                       color: _statusColor(b['status'] ?? ''),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
@@ -254,7 +242,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
         onTap: (i) {
           setState(() {
             _bottomNavIndex = i;
-            _hasUserSelectedBottomNav = true;
           });
 
           if (i == 0) {
@@ -266,7 +253,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        // CHANGED: Using the guideline color
         backgroundColor: kPrimaryColor,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
@@ -286,7 +272,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
       children: [
         IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          // CHANGED: Using the guideline color
           color: kPrimaryColor,
           onPressed: () {
             if (_pageController.hasClients) {
@@ -297,7 +282,6 @@ class _VCalendarPageState extends State<VCalendarPage> {
         Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3A59))),
         IconButton(
           icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-          // CHANGED: Using the guideline color
           color: kPrimaryColor,
           onPressed: () {
             if (_pageController.hasClients) {
@@ -350,12 +334,11 @@ class _VCalendarPageState extends State<VCalendarPage> {
             && _selectedDate!.day == day;
 
         final bookingsForDay = bookingsByDay[day];
-        // UPDATED: Added checks for new statuses
+
+        // --- MODIFIED: Removed checks for 'REJECTED' and 'COMPLETE' ---
         final isHoliday = bookingsForDay?.any((b) => (b['status'] ?? '') == 'HOLIDAY') ?? false;
         final isApproved = bookingsForDay?.any((b) => (b['status'] ?? '') == 'APPROVED') ?? false;
         final isPending = bookingsForDay?.any((b) => (b['status'] ?? '') == 'PENDING') ?? false;
-        final isComplete = bookingsForDay?.any((b) => (b['status'] ?? '') == 'COMPLETE') ?? false;
-        final isRejected = bookingsForDay?.any((b) => (b['status'] ?? '') == 'REJECTED') ?? false;
 
         Color backgroundColor = Colors.transparent;
         Color borderColor = kBorder;
@@ -371,14 +354,12 @@ class _VCalendarPageState extends State<VCalendarPage> {
           borderColor = kWarning;
           borderWidth = 2.6;
         } 
-        // UPDATED: Logic now includes Complete and Rejected, matching MyBooking.dart
-        else if (isApproved || isPending || isComplete) {
-          borderColor = isApproved ? kApproved : isPending ? kPending : kComplete;
-          borderWidth = 2.6;
-        } else if (isRejected) {
-          borderColor = kWarning; // Use the same warning color for rejected
+        // --- MODIFIED: Simplified logic to only handle APPROVED and PENDING ---
+        else if (isApproved || isPending) {
+          borderColor = isApproved ? kApproved : kPending;
           borderWidth = 2.6;
         }
+        // The 'else if (isRejected)' block has been removed
 
         return GestureDetector(
           onTap: () => _onDateTapped(month, day),
