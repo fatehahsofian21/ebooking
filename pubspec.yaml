@@ -15,6 +15,7 @@ dependencies:
   google_maps_flutter: ^2.2.5
   shared_preferences: ^2.1.1
   flutter_rating_bar: ^4.0.1
+  geolocator: ^11.0.0
 
 
 flutter:
@@ -24,4 +25,8 @@ flutter:
     - assets/bangunan1.jpg
     - assets/perkeso.png
     - assets/profile.png
-    - assets/vehicle1.jpg
+    - assets/car1.jpg
+    - assets/car2.jpg
+    - assets/van1.jpg
+    - assets/van2.jpg
+    - assets/bus.jpg    

@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ibooking/Vcalendar';
+// Original import is no longer needed for this button's primary navigation
+// import 'package:ibooking/Vcalendar'; 
+import 'package:ibooking/dashboard2.dart'; // NEW: Import for Dashboard2Screen
 import 'package:ibooking/main.dart';
 
 // --- Brand Guideline Colors ---
@@ -45,14 +47,12 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        // CHANGED: Status bar icons are now dark to be visible on the light background
         value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
         ),
         child: Container(
           width: double.infinity,
           height: double.infinity,
-          // The background is the standard light gray
           color: kBackgroundColor,
           child: Stack(
             children: [
@@ -85,10 +85,8 @@ class DashboardScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 330),
-                    // CHANGED: Text color is now dark for readability
                     const Text('Nor Fatehah Binti Sofian', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                     const SizedBox(height: 4),
-                    // CHANGED: Text color is now gray for readability
                     Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                     const SizedBox(height: 45),
                     Padding(
@@ -104,10 +102,11 @@ class DashboardScreen extends StatelessWidget {
                           _DashboardButton(
                             iconData: Icons.directions_car,
                             label: 'Vehicle',
+                            // --- MODIFIED: The onTap navigation is changed here ---
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const VCalendarPage()),
+                                MaterialPageRoute(builder: (_) => const Dashboard2Screen()),
                               );
                             },
                           ),
@@ -119,7 +118,6 @@ class DashboardScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 36.0),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        // CHANGED: Text color is now dark for readability
                         child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                       ),
                     ),
@@ -129,27 +127,22 @@ class DashboardScreen extends StatelessWidget {
                       child: Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          // CHANGED: Card background is now solid white
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          // Optional: A more subtle shadow for a light background
                           boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // CHANGED: Icon now uses the primary brand color
                             const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // CHANGED: Text color is now dark for readability
                                   const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 2),
-                                  // CHANGED: Text color is now gray for readability
                                   Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                                 ],
                               ),
@@ -163,7 +156,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
 
-              // Layer 4: Logout Button (Unchanged, as it's on the dark image)
+              // Layer 4: Logout Button (Unchanged)
               Positioned(
                 top: 40,
                 right: 16,
@@ -181,7 +174,7 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-// --- Helper Widgets (With Color Adjustments) ---
+// --- Helper Widgets (Unchanged) ---
 class _StraightHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -208,17 +201,13 @@ class _DashboardButton extends StatelessWidget {
             height: 85,
             width: 85,
             decoration: BoxDecoration(
-              // CHANGED: Button background is now solid white
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              // Optional: A more subtle shadow for a light background
               boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            // CHANGED: Icon now uses the primary brand color
             child: Icon(iconData, size: 42, color: kPrimaryColor),
           ),
           const SizedBox(height: 8),
-          // CHANGED: Text color is now dark for readability
           Text(label, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w600)),
         ],
       ),

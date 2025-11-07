@@ -1,20 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Required for FilteringTextInputFormatter
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart'; // For getting user location
 
 // --- Brand Guideline Colors (Refined) ---
-const Color kPrimaryColor = Color(0xFF007DC5); // PERKESO's primary blue
-const Color kBackgroundColor = Color(0xFFF5F5F5); // Standard light gray background
+const Color kPrimaryColor = Color(0xFF007DC5);
+const Color kBackgroundColor = Color(0xFFF5F5F5);
 
-// ---
-// --- IMPORTANT: REPLACE THIS WITH YOUR ACTUAL GOOGLE MAPS API KEY ---
-// ---
-// You must enable "Places API" and "Maps SDK for Android/iOS" in your Google Cloud Console.
+// --- IMPORTANT: REPLACE WITH YOUR API KEY ---
 const String kGoogleMapsApiKey = 'AIzaSyCARTrKnNBreG5gSj6ObaatLEaxZ9a0rek';
-
 
 class VBookingPage extends StatefulWidget {
   const VBookingPage({super.key});
@@ -24,7 +21,7 @@ class VBookingPage extends StatefulWidget {
 }
 
 class _VBookingPageState extends State<VBookingPage> {
-  // available vehicle list (plate and type) - demo data
+  // ... (No changes in this class, it remains the same)
   final List<Map<String, String>> _availableVehicles = [
     {'plate': 'WPC1234', 'type': 'Car', 'model': 'Toyota Vios'},
     {'plate': 'VAN9988', 'type': 'Van', 'model': 'Toyota Hiace'},
@@ -598,7 +595,8 @@ class _VBookingPageState extends State<VBookingPage> {
   }
 }
 
-// --- FIXED & REFINED Map Picker Page ---
+
+// --- UPDATED Map Picker Page ---
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
 
@@ -615,16 +613,17 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Timer? _debounce;
   String? _sessionToken;
 
-  // --- NEW: State variables for loading and error handling ---
   bool _isLoading = false;
   String? _errorMessage;
 
-  static const LatLng _initialCenter = LatLng(3.1576, 101.7122); // Centered on KLCC
+  // --- NEW: State variable for the current location suggestion ---
+  String? _currentLocationSuggestion;
+
+  static const LatLng _initialCenter = LatLng(3.1576, 101.7122); // Fallback center
 
   @override
   void initState() {
     super.initState();
-    // Create a new session token when the page loads
     _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
   }
 
@@ -636,27 +635,62 @@ class _MapPickerPageState extends State<MapPickerPage> {
     super.dispose();
   }
 
-  // --- REFINED: Search function with loading and error handling ---
+  Future<void> _getCurrentLocationAndSetMarker() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled.')));
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions were denied.')));
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied.')));
+      return;
+    }
+
+    try {
+      final Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final userLocation = LatLng(position.latitude, position.longitude);
+
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(userLocation, 16.0));
+      // --- MODIFIED: Don't auto-fill search bar initially ---
+      await _reverseGeocode(userLocation, updateSearchText: false);
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not get location: $e')));
+      }
+    }
+  }
+
   Future<void> _searchPlaces(String input) async {
+    // ... (search logic is unchanged)
     if (input.trim().length < 2) {
       setState(() => _predictions = []);
       return;
     }
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       final biasLat = _selectedMarker?.position.latitude ?? _initialCenter.latitude;
       final biasLng = _selectedMarker?.position.longitude ?? _initialCenter.longitude;
       final locationBias = 'circle:20000@$biasLat,$biasLng';
       final url = Uri.parse(
           'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${Uri.encodeQueryComponent(input)}&key=$kGoogleMapsApiKey&sessiontoken=$_sessionToken&locationbias=${Uri.encodeQueryComponent(locationBias)}&components=country:MY');
-      
       final resp = await http.get(url).timeout(const Duration(seconds: 10));
-
       if (resp.statusCode == 200) {
         final jsonResp = json.decode(resp.body) as Map<String, dynamic>;
         final status = jsonResp['status'] as String?;
@@ -668,19 +702,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
               final structured = s['structured_formatting'] as Map<String, dynamic>?;
               final primary = structured?['main_text'] as String? ?? (s['description'] as String? ?? '');
               final secondary = structured?['secondary_text'] as String? ?? '';
-              return {
-                'description': s['description'] as String? ?? primary,
-                'place_id': s['place_id'] as String? ?? '',
-                'primary': primary,
-                'secondary': secondary,
-              };
+              return {'description': s['description'] as String? ?? primary, 'place_id': s['place_id'] as String? ?? '', 'primary': primary, 'secondary': secondary};
             }).toList();
-            if (_predictions.isEmpty) {
-              _errorMessage = 'No results found.';
-            }
+            if (_predictions.isEmpty) _errorMessage = 'No results found.';
           });
         } else {
-          // Handle Google API errors (e.g., ZERO_RESULTS, REQUEST_DENIED)
           _errorMessage = jsonResp['error_message'] ?? 'Error fetching places: $status';
         }
       } else {
@@ -689,23 +715,19 @@ class _MapPickerPageState extends State<MapPickerPage> {
     } catch (e) {
       _errorMessage = 'Could not connect. Please check your network.';
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _selectPrediction(Map<String, String> pred) async {
+    // ... (prediction selection logic is unchanged)
     final placeId = pred['place_id'];
     if (placeId == null || placeId.isEmpty) return;
     
-    // Invalidate session token after use
     final currentSessionToken = _sessionToken;
     _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
 
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$kGoogleMapsApiKey&sessiontoken=$currentSessionToken');
-    
+    final url = Uri.parse('https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$kGoogleMapsApiKey&sessiontoken=$currentSessionToken');
     try {
       final resp = await http.get(url);
       if (resp.statusCode != 200) return;
@@ -719,18 +741,14 @@ class _MapPickerPageState extends State<MapPickerPage> {
       final formatted = result['formatted_address'] as String? ?? pred['description']!;
       final pos = LatLng(lat, lng);
       _mapController?.animateCamera(CameraUpdate.newLatLngZoom(pos, 16));
-      setState(() {
-        _selectedMarker = Marker(markerId: const MarkerId('selected'), position: pos, infoWindow: InfoWindow(title: formatted));
-        _predictions = [];
-        _searchController.text = formatted;
-        _selectedAddress = formatted;
-      });
+      await _reverseGeocode(pos);
     } catch (e) {
       // Handle error
     }
   }
 
-  Future<void> _reverseGeocode(LatLng pos) async {
+  // --- MODIFIED: `reverseGeocode` now conditionally updates the search text ---
+  Future<void> _reverseGeocode(LatLng pos, {bool updateSearchText = true}) async {
     final url = Uri.parse('https://maps.googleapis.com/maps/api/geocode/json?latlng=${pos.latitude},${pos.longitude}&key=$kGoogleMapsApiKey');
     final resp = await http.get(url);
     if (resp.statusCode != 200) return;
@@ -739,26 +757,31 @@ class _MapPickerPageState extends State<MapPickerPage> {
     if (results.isEmpty) return;
     final formatted = results.first['formatted_address'] as String? ?? '';
     setState(() {
-      _selectedMarker = Marker(markerId: const MarkerId('selected'), position: pos, infoWindow: InfoWindow(title: formatted));
-      _searchController.text = formatted;
-      _selectedAddress = formatted;
+      _selectedMarker = Marker(
+        markerId: const MarkerId('selected'),
+        position: pos,
+        infoWindow: InfoWindow(title: formatted),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+
+      _selectedAddress = formatted; // Always update the selected address
       _predictions = [];
+
+      if (updateSearchText) {
+        _searchController.text = formatted;
+        _currentLocationSuggestion = null; // Hide suggestion once a selection is made
+      } else {
+        // This is the initial load, so set the suggestion text
+        _currentLocationSuggestion = formatted;
+      }
     });
   }
 
-  // --- REFINED: Body widget that shows loading, errors, results, or the map ---
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade700)),
-        ),
-      );
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_errorMessage != null) return Center(child: Padding(padding: const EdgeInsets.all(20.0), child: Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: Colors.red.shade700))));
+    
+    // Show search predictions if user is typing
     if (_predictions.isNotEmpty) {
       return ListView.separated(
         itemCount: _predictions.length,
@@ -774,10 +797,14 @@ class _MapPickerPageState extends State<MapPickerPage> {
         },
       );
     }
+    
     // Default view is the map
     return GoogleMap(
       initialCameraPosition: const CameraPosition(target: _initialCenter, zoom: 12),
-      onMapCreated: (c) => _mapController = c,
+      onMapCreated: (GoogleMapController controller) {
+        _mapController = controller;
+        _getCurrentLocationAndSetMarker(); // Detect user location on map load
+      },
       markers: _selectedMarker != null ? {_selectedMarker!} : {},
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
@@ -809,37 +836,55 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 fillColor: Colors.white,
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _predictions = [];
-                      _errorMessage = null;
-                    });
-                  },
-                ) : null
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _predictions = [];
+                            _errorMessage = null;
+                          });
+                        },
+                      )
+                    : null,
               ),
               onChanged: (v) {
+                // When user starts typing, hide the current location suggestion
+                if (_currentLocationSuggestion != null) {
+                  setState(() {
+                    _currentLocationSuggestion = null;
+                  });
+                }
                 _debounce?.cancel();
-                _debounce = Timer(const Duration(milliseconds: 400), () {
-                  _searchPlaces(v);
-                });
+                _debounce = Timer(const Duration(milliseconds: 400), () => _searchPlaces(v));
               },
             ),
           ),
-          // Use the new _buildBody method here
+
+          // --- NEW: Current Location Suggestion Widget ---
+          if (_currentLocationSuggestion != null)
+            Material(
+              elevation: 2,
+              child: ListTile(
+                leading: const Icon(Icons.my_location, color: kPrimaryColor),
+                title: const Text('Use current location', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(_currentLocationSuggestion!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                onTap: () {
+                  // When tapped, populate the search bar and select the location
+                  setState(() {
+                    _searchController.text = _currentLocationSuggestion!;
+                    _currentLocationSuggestion = null; // Hide the suggestion
+                  });
+                },
+              ),
+            ),
+            
           Expanded(child: _buildBody()),
-          // The "Select" button only appears after a location has been chosen
           if (_selectedAddress != null)
             Container(
               padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2)),
-                ],
-              ),
+              decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, -2))]),
               child: Row(
                 children: [
                   const Icon(Icons.location_on, color: kPrimaryColor),
@@ -848,11 +893,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
-                    onPressed: () => Navigator.of(context).pop({
-                      'address': _selectedAddress,
-                      'lat': _selectedMarker?.position.latitude,
-                      'lng': _selectedMarker?.position.longitude,
-                    }),
+                    onPressed: () => Navigator.of(context).pop({'address': _selectedAddress, 'lat': _selectedMarker?.position.latitude, 'lng': _selectedMarker?.position.longitude}),
                     child: const Text('Select', style: TextStyle(color: Colors.white)),
                   ),
                 ],

@@ -2,9 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ibooking/Vcalendar';
 import 'package:ibooking/approval.dart'; // Import the new approval page
-import 'package:ibooking/main.dart'; 
+import 'package:ibooking/main.dart';
 
 // --- Brand Guideline Colors (Consistent with dashboard.dart) ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -12,6 +11,24 @@ const Color kBackgroundColor = Color(0xFFF5F5F5);
 
 class AppDash extends StatelessWidget {
   const AppDash({super.key});
+
+  // --- Dummy Data for Pending Approvals ---
+  final List<Map<String, dynamic>> pendingApprovals = const [
+    {
+      'icon': Icons.directions_car,
+      'title': 'Toyota Vellfire (VBB 1234)',
+      'subtitle1': '31 Oct 2025 (Fri) • 9:00 AM - 11:00 AM',
+      'subtitle2': 'Requested by: Siti Aisyah',
+    },
+    {
+      'icon': Icons.directions_bus,
+      'title': 'Scania Touring (BUS 8899)',
+      'subtitle1': '03 Nov 2025 (Mon) • 2:00 PM - 5:00 PM',
+      'subtitle2': 'Requested by: Razak Bin Ali',
+    },
+    // You can add more items here, but only the top 3 will be visually stacked.
+  ];
+
 
   // --- Logout Logic ---
   Future<void> _confirmLogout(BuildContext context) async {
@@ -41,6 +58,9 @@ class AppDash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine how many cards to show in the visual stack (max 3)
+    final stackedCardCount = pendingApprovals.length > 3 ? 3 : pendingApprovals.length;
+
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(
@@ -90,30 +110,20 @@ class AppDash extends StatelessWidget {
 
                     // --- Button Layout ---
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36),
-                      child: Column(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _DashboardButton(
-                                iconData: Icons.meeting_room,
-                                label: 'Meeting Room',
-                                onTap: () {},
-                              ),
-                              _DashboardButton(
-                                iconData: Icons.directions_car,
-                                label: 'Vehicle',
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const VCalendarPage()),
-                                  );
-                                },
-                              ),
-                            ],
+                          _DashboardButton(
+                            iconData: Icons.meeting_room,
+                            label: 'Meeting Room',
+                            onTap: () {},
                           ),
-                          const SizedBox(height: 24),
+                          _DashboardButton(
+                            iconData: Icons.directions_car,
+                            label: 'Vehicle',
+                            onTap: () {},
+                          ),
                           _DashboardButton(
                             iconData: Icons.playlist_add_check_rounded,
                             label: 'Approval',
@@ -129,7 +139,62 @@ class AppDash extends StatelessWidget {
                     ),
                     const SizedBox(height: 45),
 
-                    // --- MODIFIED: "Upcoming Booking" Section (Matches dashboard.dart exactly) ---
+                    // --- "Work Basket" Section ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- Pending Approval Sub-section ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Pending Approval (${pendingApprovals.length})', 
+                          style: TextStyle(color: Colors.red.shade700, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // --- MODIFIED: Stacking card layout ---
+                    if (pendingApprovals.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                        child: SizedBox(
+                          // Calculate height needed for the stack to not overflow
+                          height: 95 + (stackedCardCount - 1) * 12.0,
+                          child: Stack(
+                            children: List.generate(stackedCardCount, (index) {
+                              final item = pendingApprovals[index];
+                              // Calculate offsets for the stacking effect
+                              final topOffset = index * 12.0;
+                              final horizontalPadding = index * 8.0;
+
+                              // The .reversed.toList() is crucial: it makes sure the first item
+                              // in the list is drawn last, so it appears on top.
+                              return Positioned(
+                                top: topOffset,
+                                left: horizontalPadding,
+                                right: horizontalPadding,
+                                child: _buildApprovalCard(
+                                  icon: item['icon'],
+                                  title: item['title'],
+                                  subtitle1: item['subtitle1'],
+                                  subtitle2: item['subtitle2'],
+                                ),
+                              );
+                            }).reversed.toList(),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+
+                    // --- Upcoming Booking Sub-section ---
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 36.0),
                       child: Align(
@@ -188,6 +253,42 @@ class AppDash extends StatelessWidget {
       ),
     );
   }
+
+  // --- Reusable widget for approval cards ---
+  Widget _buildApprovalCard({
+    required IconData icon,
+    required String title,
+    required String subtitle1,
+    required String subtitle2,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 32, color: kPrimaryColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text(subtitle1, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(subtitle2, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // --- WIDGET: Header Clipper ---
@@ -215,17 +316,17 @@ class _DashboardButton extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 85,
-            width: 85,
+            height: 75,
+            width: 75,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
             ),
-            child: Icon(iconData, size: 42, color: kPrimaryColor),
+            child: Icon(iconData, size: 38, color: kPrimaryColor),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(label, style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600)),
         ],
       ),
     );
