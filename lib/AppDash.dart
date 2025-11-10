@@ -1,17 +1,23 @@
-// AppDash.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ibooking/AppBookingDetail.dart';
 import 'package:ibooking/approval.dart'; // Import the new approval page
+import 'package:ibooking/dashboard.dart'; // <<< 1. ADD THIS IMPORT
+import 'package:ibooking/dashboard2.dart';
 import 'package:ibooking/main.dart';
 
 // --- Brand Guideline Colors (Consistent with dashboard.dart) ---
 const Color kPrimaryColor = Color(0xFF007DC5);
 const Color kBackgroundColor = Color(0xFFF5F5F5);
 
-class AppDash extends StatelessWidget {
+class AppDash extends StatefulWidget {
   const AppDash({super.key});
 
+  @override
+  State<AppDash> createState() => _AppDashState();
+}
+
+class _AppDashState extends State<AppDash> {
   // --- Dummy Data for Pending Approvals ---
   final List<Map<String, dynamic>> pendingApprovals = const [
     {
@@ -26,9 +32,15 @@ class AppDash extends StatelessWidget {
       'subtitle1': '03 Nov 2025 (Mon) • 2:00 PM - 5:00 PM',
       'subtitle2': 'Requested by: Razak Bin Ali',
     },
-    // You can add more items here, but only the top 3 will be visually stacked.
+    {
+      'icon': Icons.local_taxi,
+      'title': 'Proton X50 (VCD 5678)',
+      'subtitle1': '04 Nov 2025 (Tue) • 1:00 PM - 3:00 PM',
+      'subtitle2': 'Requested by: Michael Chen',
+    },
   ];
 
+  bool _isStackExpanded = false;
 
   // --- Logout Logic ---
   Future<void> _confirmLogout(BuildContext context) async {
@@ -58,8 +70,13 @@ class AppDash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine how many cards to show in the visual stack (max 3)
-    final stackedCardCount = pendingApprovals.length > 3 ? 3 : pendingApprovals.length;
+    // --- Constants for card layout calculations ---
+    const double cardHeight = 88.0;
+    const double verticalSpacingExpanded = 12.0;
+    const double verticalOffsetCollapsed = 18.0;
+
+    final double stackedHeight = cardHeight + (pendingApprovals.length - 1) * verticalOffsetCollapsed;
+    final double expandedHeight = (cardHeight * pendingApprovals.length) + (verticalSpacingExpanded * (pendingApprovals.length - 1));
 
     return Scaffold(
       body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -81,8 +98,189 @@ class AppDash extends StatelessWidget {
                   child: Image.asset('assets/bangunan.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
                 ),
               ),
-              
-              // Layer 2: Profile Picture
+
+              // Layer 2: Logout Button
+              Positioned(
+                top: 40,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
+                  tooltip: 'Log out',
+                  onPressed: () => _confirmLogout(context),
+                ),
+              ),
+
+              // --- FIXED HEADER AND SCROLLABLE BODY ---
+              Column(
+                children: [
+                  // --- PART A: FIXED CONTENT ---
+                  const SizedBox(height: 280 + 48),
+                  const Text('Ahmad Bin Hassan', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  const SizedBox(height: 4),
+                  Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                  const SizedBox(height: 30),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _DashboardButton(
+                          iconData: Icons.meeting_room,
+                          label: 'Meeting Room',
+                          onTap: () {},
+                        ),
+                        _DashboardButton(
+                          iconData: Icons.directions_car,
+                          label: 'Vehicle',
+                          // ======================= 2. UPDATE THIS ONTAP =======================
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const Dashboard2Screen()),
+                            );
+                          },
+                          // ====================================================================
+                        ),
+                        _DashboardButton(
+                          iconData: Icons.playlist_add_check_rounded,
+                          label: 'Approval',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ApprovalPage()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+
+                  // --- PART B: SCROLLABLE CONTENT ---
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (_isStackExpanded) {
+                                  setState(() {
+                                    _isStackExpanded = false;
+                                  });
+                                }
+                              },
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Pending Approval (${pendingApprovals.length})',
+                                  style: TextStyle(color: Colors.red.shade700, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (pendingApprovals.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (!_isStackExpanded) {
+                                    setState(() {
+                                      _isStackExpanded = true;
+                                    });
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOutCubic,
+                                  height: _isStackExpanded ? expandedHeight : stackedHeight,
+                                  child: Stack(
+                                    children: List.generate(pendingApprovals.length, (index) {
+                                      final item = pendingApprovals[index];
+                                      final topPosition = _isStackExpanded
+                                          ? index * (cardHeight + verticalSpacingExpanded)
+                                          : index * verticalOffsetCollapsed;
+
+                                      return AnimatedPositioned(
+                                        duration: const Duration(milliseconds: 350),
+                                        curve: Curves.easeOutCubic,
+                                        top: topPosition,
+                                        left: 0,
+                                        right: 0,
+                                        child: AbsorbPointer(
+                                          absorbing: !_isStackExpanded,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => AppBookingDetailPage(
+                                                    bookingDetails: item,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: _buildApprovalCard(
+                                              icon: item['icon'],
+                                              title: item['title'],
+                                              subtitle1: item['subtitle1'],
+                                              subtitle2: item['subtitle2'],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).reversed.toList(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 2),
+                                        Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               Positioned(
                 top: 220,
                 left: 0,
@@ -95,158 +293,6 @@ class AppDash extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Layer 3: Scrollable Content
-              SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 330),
-                    // Approver's Name and Role
-                    const Text('Ahmad Bin Hassan', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                    const SizedBox(height: 4),
-                    Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                    const SizedBox(height: 30),
-
-                    // --- Button Layout ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _DashboardButton(
-                            iconData: Icons.meeting_room,
-                            label: 'Meeting Room',
-                            onTap: () {},
-                          ),
-                          _DashboardButton(
-                            iconData: Icons.directions_car,
-                            label: 'Vehicle',
-                            onTap: () {},
-                          ),
-                          _DashboardButton(
-                            iconData: Icons.playlist_add_check_rounded,
-                            label: 'Approval',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ApprovalPage()),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 45),
-
-                    // --- "Work Basket" Section ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- Pending Approval Sub-section ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Pending Approval (${pendingApprovals.length})', 
-                          style: TextStyle(color: Colors.red.shade700, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // --- MODIFIED: Stacking card layout ---
-                    if (pendingApprovals.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                        child: SizedBox(
-                          // Calculate height needed for the stack to not overflow
-                          height: 95 + (stackedCardCount - 1) * 12.0,
-                          child: Stack(
-                            children: List.generate(stackedCardCount, (index) {
-                              final item = pendingApprovals[index];
-                              // Calculate offsets for the stacking effect
-                              final topOffset = index * 12.0;
-                              final horizontalPadding = index * 8.0;
-
-                              // The .reversed.toList() is crucial: it makes sure the first item
-                              // in the list is drawn last, so it appears on top.
-                              return Positioned(
-                                top: topOffset,
-                                left: horizontalPadding,
-                                right: horizontalPadding,
-                                child: _buildApprovalCard(
-                                  icon: item['icon'],
-                                  title: item['title'],
-                                  subtitle1: item['subtitle1'],
-                                  subtitle2: item['subtitle2'],
-                                ),
-                              );
-                            }).reversed.toList(),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 24),
-
-                    // --- Upcoming Booking Sub-section ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 2),
-                                  Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24), // Bottom padding
-                  ],
-                ),
-              ),
-
-              // Layer 4: Logout Button
-              Positioned(
-                top: 40,
-                right: 16,
-                child: IconButton(
-                  icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
-                  tooltip: 'Log out',
-                  onPressed: () => _confirmLogout(context),
-                ),
-              ),
             ],
           ),
         ),
@@ -254,7 +300,6 @@ class AppDash extends StatelessWidget {
     );
   }
 
-  // --- Reusable widget for approval cards ---
   Widget _buildApprovalCard({
     required IconData icon,
     required String title,
@@ -262,6 +307,7 @@ class AppDash extends StatelessWidget {
     required String subtitle2,
   }) {
     return Container(
+      height: 88.0,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -276,12 +322,13 @@ class AppDash extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(title, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(title, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(subtitle1, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                Text(subtitle1, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(subtitle2, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                Text(subtitle2, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -291,7 +338,6 @@ class AppDash extends StatelessWidget {
   }
 }
 
-// --- WIDGET: Header Clipper ---
 class _StraightHeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -302,7 +348,6 @@ class _StraightHeaderClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-// --- WIDGET: Dashboard Button ---
 class _DashboardButton extends StatelessWidget {
   final IconData iconData;
   final String label;

@@ -1,6 +1,6 @@
 // approval.dart
 
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
 import 'package:ibooking/AppBookingDetail.dart';
 import 'package:ibooking/AppDash.dart';
 import 'package:ibooking/AppHistory.dart';
@@ -180,7 +180,10 @@ class _BookingApprovalCard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AppBookingDetailPage(),
+                      //============================ ERROR FIX ============================
+                      // You must pass the 'booking' map to the detail page.
+                      builder: (context) => AppBookingDetailPage(bookingDetails: booking),
+                      //===================================================================
                     ),
                   );
                 },

@@ -1,7 +1,8 @@
 // AppBookingDetail.dart
 
 import 'package:flutter/material.dart';
-import 'package:ibooking/AppHistory.dart'; // Make sure this page exists
+import 'package:ibooking/AppHistory.dart';
+import 'package:ibooking/approval.dart'; // ADDED: Import for ApprovalPage navigation
 
 // --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -12,14 +13,20 @@ const Color kPending = Color(0xFFF39F21);
 const Color kWarning = Color(0xFFA82525);
 const Color kPrimaryDarkColor = Color.fromARGB(255, 24, 42, 94);
 const Color kBorder = Color(0xFFCFD6DE);
+const Color kCompletedColor = Color(0xFF17a2b8); // ADDED: Color for consistency
 
 // --- Helper function to determine the color of the status tag ---
-Color _statusColor(String status) {
-  switch (status) {
+// MODIFIED: To handle more statuses from different pages
+Color _statusColor(String? status) {
+  switch (status?.toUpperCase()) {
     case 'PENDING':
       return kPending;
     case 'APPROVED':
       return kPrimaryColor;
+    case 'COMPLETED':
+      return kCompletedColor;
+    case 'REJECTED':
+      return kRejectColor;
     case 'HOLIDAY':
       return kWarning;
     default:
@@ -28,28 +35,46 @@ Color _statusColor(String status) {
 }
 
 class AppBookingDetailPage extends StatefulWidget {
-  const AppBookingDetailPage({super.key});
+  final Map<String, dynamic> bookingDetails;
+  // ADDED: An optional parameter to remember where the user came from.
+  final String? sourcePage;
+
+  const AppBookingDetailPage({
+    super.key,
+    required this.bookingDetails,
+    this.sourcePage, // This is the new parameter
+  });
 
   @override
   State<AppBookingDetailPage> createState() => _AppBookingDetailPageState();
 }
 
 class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
-  // --- Dummy data is now defined in the state for access across methods ---
-  final Map<String, dynamic> dummyBooking = {
-    'requester': 'Nor Fatehah Binti Sofian',
-    'model': 'Toyota Vellfire',
-    'plate': 'WPC1234',
-    'pickupDate': '02 Nov 2025 09:00 AM',
-    'returnDate': '02 Nov 2025 11:00 AM',
-    'destination': 'Menara TM, Kuala Lumpur',
-    'pickupLocation': 'PERKESO HQ, Jalan Ampang',
-    'returnLocation': 'PERKESO HQ, Jalan Ampang',
-    'pax': 3,
-    'requireDriver': true, 
-    'purpose': 'Official meeting with Telekom Malaysia for project discussion.',
-    'uploadedDocName': 'meeting_invitation.pdf',
-  };
+  // --- This map name is kept for consistency with your original code ---
+  late final Map<String, dynamic> dummyBooking;
+
+  @override
+  void initState() {
+    super.initState();
+    // MODIFIED: This logic is now more robust. It can correctly display details
+    // whether the data comes from AppDash, ApprovalPage, or AppHistoryPage.
+    dummyBooking = {
+      'requester': widget.bookingDetails['requester'] ?? widget.bookingDetails['subtitle2']?.split(':').last.trim() ?? 'N/A',
+      'department': widget.bookingDetails['department'] ?? 'N/A',
+      'model': widget.bookingDetails['model'] ?? widget.bookingDetails['title']?.split('(').first.trim() ?? 'N/A',
+      'plate': widget.bookingDetails['plate'] ?? widget.bookingDetails['title']?.split('(').last.replaceAll(')', '').trim() ?? 'N/A',
+      'pickupDate': widget.bookingDetails['pickupDate'] ?? widget.bookingDetails['subtitle1']?.split('•')[0].trim() ?? 'N/A',
+      'returnDate': widget.bookingDetails['returnDate'] ?? widget.bookingDetails['subtitle1']?.split('•')[1].trim() ?? 'N/A',
+      'destination': widget.bookingDetails['destination'] ?? 'N/A',
+      'pickupLocation': widget.bookingDetails['pickupLocation'] ?? 'N/A',
+      'returnLocation': widget.bookingDetails['returnLocation'] ?? 'N/A',
+      'pax': widget.bookingDetails['pax'] ?? 0,
+      'requireDriver': widget.bookingDetails['requireDriver'] ?? false,
+      'purpose': widget.bookingDetails['purpose'] ?? 'N/A',
+      'uploadedDocName': widget.bookingDetails['uploadedDocName'] ?? 'N/A',
+      'status': widget.bookingDetails['status'] ?? 'PENDING', // Get status from data
+    };
+  }
 
   // --- DIALOG: For Rejecting a Booking ---
   Future<void> _showRejectDialog() async {
@@ -66,8 +91,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
             child: TextFormField(
               controller: reasonController,
               autofocus: true,
-              // --- MODIFIED: Makes the text field larger ---
-              maxLines: 3, 
+              maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Reason for Rejection',
                 hintText: 'e.g., Vehicle unavailable',
@@ -179,7 +203,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const AppHistoryPage()),
-                (Route<dynamic> route) => false,
+                (route) => false,
               );
             },
             child: const Text('OK'),
@@ -191,17 +215,39 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    const String status = 'PENDING';
+    // ADDED: This logic checks the booking's actual status
+    final bool showActionButtons = (dummyBooking['status']?.toUpperCase() ?? 'PENDING') == 'PENDING';
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
         backgroundColor: kPrimaryColor,
         elevation: 0,
+        // ======================= MODIFIED BACK BUTTON LOGIC =======================
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Check if the sourcePage parameter is 'approval'.
+            if (widget.sourcePage == 'approval') {
+              // If yes, navigate back to the ApprovalPage.
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const ApprovalPage()),
+              );
+            } else if (widget.sourcePage == 'history') {
+              // If it's from history, go back there.
+               Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const AppHistoryPage()),
+              );
+            }
+            else {
+              // Otherwise, perform the default pop action (from AppDash).
+              Navigator.pop(context);
+            }
+          },
         ),
+        // ========================================================================
         title: const Text('Booking Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -227,7 +273,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  child: _buildStatusTag(status),
+                  // MODIFIED: Use the actual status from the booking data
+                  child: _buildStatusTag(dummyBooking['status']),
                 ),
               ),
               Container(
@@ -243,6 +290,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInfoRow('Requester', dummyBooking['requester']),
+                    _buildInfoRow('Department', dummyBooking['department']),
                     _buildInfoRow('Vehicle Type', dummyBooking['model']),
                     _buildInfoRow('Plate Number', dummyBooking['plate']),
                     _buildInfoRow('Pick-Up Date & Time', dummyBooking['pickupDate']),
@@ -258,37 +306,39 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 ),
               ),
               const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle, size: 18),
-                      label: const Text('Approve'),
-                      onPressed: _showApproveDialog,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kApproveColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // ADDED: This ensures the Approve/Reject buttons only show for pending items
+              if (showActionButtons)
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle, size: 18),
+                        label: const Text('Approve'),
+                        onPressed: _showApproveDialog,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kApproveColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.cancel, size: 18),
-                      label: const Text('Reject'),
-                      onPressed: _showRejectDialog,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kRejectColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.cancel, size: 18),
+                        label: const Text('Reject'),
+                        onPressed: _showRejectDialog,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kRejectColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              )
+                  ],
+                )
             ],
           ),
         ),
@@ -297,6 +347,10 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   }
 
   Widget _buildInfoRow(String title, String? value) {
+     // ADDED: Logic to not show a row if its data is missing
+    if (value == null || value == 'N/A' || value.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Column(
@@ -304,7 +358,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         children: [
           Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF8B97A6))),
           const SizedBox(height: 4),
-          Text(value ?? 'N/A', style: const TextStyle(fontSize: 16, color: Color(0xFF2E3A59))),
+          Text(value, style: const TextStyle(fontSize: 16, color: Color(0xFF2E3A59))),
           const Divider(height: 16),
         ],
       ),
@@ -312,10 +366,11 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   }
 
   Widget _buildStatusTag(String status) {
+    // Uses the modified _statusColor function
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: _statusColor(status), borderRadius: BorderRadius.circular(18)),
-      child: Text(status, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.8)),
+      child: Text(status.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.8)),
     );
   }
 }
@@ -340,7 +395,7 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
 
   DateTime? _selectedDateSuper;
   List<Map<String, dynamic>>? _bookingsForSelectedDateSuper;
-  
+
   final Map<int, List<Map<String, dynamic>>> bookingsByDaySuper = {
     5: [{'requester': 'Shera', 'department': 'Engineering', 'model': 'Toyota Vellfire', 'plate': 'WPC1234', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'purpose': 'Client meeting at KL Sentral'}],
     21: [{'requester': 'Aiman', 'department': 'BST', 'model': 'Isuzu Bus', 'plate': 'BNM1234', 'time': '9:00 AM – 5:00 PM', 'status': 'APPROVED', 'purpose': 'Team building event at Port Dickson'}],
@@ -490,7 +545,7 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
       ),
     );
   }
-  
+
   Widget _buildDetailRow(IconData icon, String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
