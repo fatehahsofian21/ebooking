@@ -245,7 +245,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
           });
 
           if (i == 0) {
-            // Summary - on this page already
+            // Vehicle List - on this page already
           } else if (i == 1) {
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
           } else if (i == 2) {
@@ -257,7 +257,7 @@ class _VCalendarPageState extends State<VCalendarPage> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Summary'),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Vehicle List'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Booked Vehicle'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'My Booking'),
         ],

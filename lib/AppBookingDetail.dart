@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:ibooking/AppHistory.dart';
-import 'package:ibooking/approval.dart'; // ADDED: Import for ApprovalPage navigation
+import 'package:ibooking/approval.dart';
 
 // --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -13,10 +13,9 @@ const Color kPending = Color(0xFFF39F21);
 const Color kWarning = Color(0xFFA82525);
 const Color kPrimaryDarkColor = Color.fromARGB(255, 24, 42, 94);
 const Color kBorder = Color(0xFFCFD6DE);
-const Color kCompletedColor = Color(0xFF17a2b8); // ADDED: Color for consistency
+const Color kCompletedColor = Color(0xFF17a2b8);
 
-// --- Helper function to determine the color of the status tag ---
-// MODIFIED: To handle more statuses from different pages
+// Helper function to determine the color of the status tag
 Color _statusColor(String? status) {
   switch (status?.toUpperCase()) {
     case 'PENDING':
@@ -36,13 +35,12 @@ Color _statusColor(String? status) {
 
 class AppBookingDetailPage extends StatefulWidget {
   final Map<String, dynamic> bookingDetails;
-  // ADDED: An optional parameter to remember where the user came from.
   final String? sourcePage;
 
   const AppBookingDetailPage({
     super.key,
     required this.bookingDetails,
-    this.sourcePage, // This is the new parameter
+    this.sourcePage,
   });
 
   @override
@@ -50,15 +48,14 @@ class AppBookingDetailPage extends StatefulWidget {
 }
 
 class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
-  // --- This map name is kept for consistency with your original code ---
-  late final Map<String, dynamic> dummyBooking;
+  late final Map<String, dynamic> bookingData;
 
   @override
   void initState() {
     super.initState();
-    // MODIFIED: This logic is now more robust. It can correctly display details
-    // whether the data comes from AppDash, ApprovalPage, or AppHistoryPage.
-    dummyBooking = {
+    // ======================= REFINED DATA HANDLING =======================
+    // This now correctly extracts all possible details passed from any source page.
+    bookingData = {
       'requester': widget.bookingDetails['requester'] ?? widget.bookingDetails['subtitle2']?.split(':').last.trim() ?? 'N/A',
       'department': widget.bookingDetails['department'] ?? 'N/A',
       'model': widget.bookingDetails['model'] ?? widget.bookingDetails['title']?.split('(').first.trim() ?? 'N/A',
@@ -72,8 +69,11 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       'requireDriver': widget.bookingDetails['requireDriver'] ?? false,
       'purpose': widget.bookingDetails['purpose'] ?? 'N/A',
       'uploadedDocName': widget.bookingDetails['uploadedDocName'] ?? 'N/A',
-      'status': widget.bookingDetails['status'] ?? 'PENDING', // Get status from data
+      'status': widget.bookingDetails['status'] ?? 'PENDING',
+      'driverName': widget.bookingDetails['driverName'], // Captures the driver's name
+      'rejectionReason': widget.bookingDetails['rejectionReason'], // Captures the rejection reason
     };
+    // ====================================================================
   }
 
   // --- DIALOG: For Rejecting a Booking ---
@@ -131,7 +131,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
 
   // --- DIALOG: For Approving (with driver assignment) ---
   Future<void> _showApproveDialog() async {
-    final bool needsDriver = dummyBooking['requireDriver'] == true;
+    final bool needsDriver = bookingData['requireDriver'] == true;
 
     if (needsDriver) {
       final List<String> drivers = ['Ahmad', 'Bala', 'Chan'];
@@ -215,39 +215,25 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ADDED: This logic checks the booking's actual status
-    final bool showActionButtons = (dummyBooking['status']?.toUpperCase() ?? 'PENDING') == 'PENDING';
+    final bool showActionButtons = (bookingData['status']?.toUpperCase() ?? 'PENDING') == 'PENDING';
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
         backgroundColor: kPrimaryColor,
         elevation: 0,
-        // ======================= MODIFIED BACK BUTTON LOGIC =======================
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
-            // Check if the sourcePage parameter is 'approval'.
             if (widget.sourcePage == 'approval') {
-              // If yes, navigate back to the ApprovalPage.
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ApprovalPage()),
-              );
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ApprovalPage()));
             } else if (widget.sourcePage == 'history') {
-              // If it's from history, go back there.
-               Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const AppHistoryPage()),
-              );
-            }
-            else {
-              // Otherwise, perform the default pop action (from AppDash).
+               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AppHistoryPage()));
+            } else {
               Navigator.pop(context);
             }
           },
         ),
-        // ========================================================================
         title: const Text('Booking Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
@@ -273,8 +259,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  // MODIFIED: Use the actual status from the booking data
-                  child: _buildStatusTag(dummyBooking['status']),
+                  child: _buildStatusTag(bookingData['status']),
                 ),
               ),
               Container(
@@ -289,24 +274,28 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow('Requester', dummyBooking['requester']),
-                    _buildInfoRow('Department', dummyBooking['department']),
-                    _buildInfoRow('Vehicle Type', dummyBooking['model']),
-                    _buildInfoRow('Plate Number', dummyBooking['plate']),
-                    _buildInfoRow('Pick-Up Date & Time', dummyBooking['pickupDate']),
-                    _buildInfoRow('Return Date & Time', dummyBooking['returnDate']),
-                    _buildInfoRow('Number of Pax', dummyBooking['pax'].toString()),
-                    _buildInfoRow('Require Driver', (dummyBooking['requireDriver'] == true) ? 'Yes' : 'No'),
-                    _buildInfoRow('Destination', dummyBooking['destination']),
-                    _buildInfoRow('Pick-Up Location', dummyBooking['pickupLocation']),
-                    _buildInfoRow('Return Location', dummyBooking['returnLocation']),
-                    _buildInfoRow('Purpose of Booking', dummyBooking['purpose']),
-                    _buildInfoRow('Supported Document', dummyBooking['uploadedDocName']),
+                    _buildInfoRow('Requester', bookingData['requester']),
+                    _buildInfoRow('Department', bookingData['department']),
+                    _buildInfoRow('Vehicle Type', bookingData['model']),
+                    _buildInfoRow('Plate Number', bookingData['plate']),
+                    _buildInfoRow('Pick-Up Date & Time', bookingData['pickupDate']),
+                    _buildInfoRow('Return Date & Time', bookingData['returnDate']),
+                    _buildInfoRow('Number of Pax', bookingData['pax'].toString()),
+                    _buildInfoRow('Require Driver', (bookingData['requireDriver'] == true) ? 'Yes' : 'No'),
+                    _buildInfoRow('Destination', bookingData['destination']),
+                    _buildInfoRow('Pick-Up Location', bookingData['pickupLocation']),
+                    _buildInfoRow('Return Location', bookingData['returnLocation']),
+                    _buildInfoRow('Purpose of Booking', bookingData['purpose']),
+                    _buildInfoRow('Supported Document', bookingData['uploadedDocName']),
+                    
+                    // ================= REFINED: Conditionally displays driver and rejection info =================
+                    _buildInfoRow('Assigned Driver', bookingData['driverName']),
+                    _buildHighlightedInfoRow('Reason for Rejection', bookingData['rejectionReason'], kRejectColor),
+                    // =========================================================================================
                   ],
                 ),
               ),
               const SizedBox(height: 30),
-              // ADDED: This ensures the Approve/Reject buttons only show for pending items
               if (showActionButtons)
                 Row(
                   children: [
@@ -347,7 +336,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   }
 
   Widget _buildInfoRow(String title, String? value) {
-     // ADDED: Logic to not show a row if its data is missing
     if (value == null || value == 'N/A' || value.trim().isEmpty) {
       return const SizedBox.shrink();
     }
@@ -364,9 +352,33 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       ),
     );
   }
+  
+  // REFINED: New helper widget for highlighted information like rejection reasons
+  Widget _buildHighlightedInfoRow(String title, String? value, Color textColor) {
+    if (value == null || value.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8B97A6))),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 16, color: textColor, fontWeight: FontWeight.w500)),
+          const Divider(height: 16),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStatusTag(String status) {
-    // Uses the modified _statusColor function
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: _statusColor(status), borderRadius: BorderRadius.circular(18)),
@@ -376,7 +388,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
 }
 
 // =========================================================================
-// WIDGET: The Super Calendar functionality, encapsulated for the dialog
+// WIDGET: The Super Calendar functionality (No changes needed here)
 // =========================================================================
 class SuperCalendarDialogWidget extends StatefulWidget {
   const SuperCalendarDialogWidget({super.key});
@@ -397,8 +409,8 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
   List<Map<String, dynamic>>? _bookingsForSelectedDateSuper;
 
   final Map<int, List<Map<String, dynamic>>> bookingsByDaySuper = {
-    5: [{'requester': 'Shera', 'department': 'Engineering', 'model': 'Toyota Vellfire', 'plate': 'WPC1234', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'purpose': 'Client meeting at KL Sentral'}],
-    21: [{'requester': 'Aiman', 'department': 'BST', 'model': 'Isuzu Bus', 'plate': 'BNM1234', 'time': '9:00 AM – 5:00 PM', 'status': 'APPROVED', 'purpose': 'Team building event at Port Dickson'}],
+    5: [{'requester': 'Shera', 'department': 'Engineering', 'model': 'Toyota Vellfire', 'plate': 'WPC1234', 'time': '10:00 AM – 3:00 PM', 'status': 'APPROVED', 'purpose': 'Client meeting at KL Sentral', 'driver': 'Bala'}],
+    21: [{'requester': 'Aiman', 'department': 'BST', 'model': 'Isuzu Bus', 'plate': 'BNM1234', 'time': '9:00 AM – 5:00 PM', 'status': 'APPROVED', 'purpose': 'Team building event at Port Dickson', 'driver': 'Ahmad'}],
     25: [{'name': 'PUBLIC HOLIDAY', 'status': 'HOLIDAY'}],
   };
 
@@ -539,6 +551,8 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
           const Divider(height: 16),
           _buildDetailRow(Icons.person_outline, 'Requester:', '${booking['requester']} (${booking['department']})'),
           _buildDetailRow(Icons.directions_car_outlined, 'Vehicle:', '${booking['plate']}'),
+          if (booking['driver'] != null)
+            _buildDetailRow(Icons.person_pin_circle_outlined, 'Driver:', '${booking['driver']}'),
           _buildDetailRow(Icons.access_time, 'Time:', '${booking['time']}'),
           _buildDetailRow(Icons.comment_outlined, 'Purpose:', '${booking['purpose']}'),
         ],

@@ -3,6 +3,8 @@ import 'package:ibooking/dashboard.dart';
 import 'package:ibooking/myBooking.dart';
 // --- CHANGE: Added import for the new Approver Dashboard Screen ---
 import 'package:ibooking/AppDash.dart';
+// --- CHANGE: Added import for the new Driver Dashboard Screen ---
+import 'package:ibooking/DriDash.dart'; // Make sure you have created this file
 
 // --- Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5); // Primary Blue
@@ -50,6 +52,8 @@ class IBookingApp extends StatelessWidget {
         '/myBookingPage': (context) => MyBookingPage(),
         // --- CHANGE: Added the route for the Approver Dashboard ---
         '/appdash': (context) => const AppDash(),
+        // --- CHANGE: Added the route for the Driver Dashboard ---
+        '/dridash': (context) => const DriDash(),
       },
     );
   }
@@ -126,7 +130,10 @@ class _LoginPageState extends State<LoginPage> {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    // --- CHANGE: Renamed variables from "admin" to "approver" ---
+    // --- CHANGE: Added Driver user credentials ---
+    const String driverEmail = "driver@perkeso.gov.my";
+    const String driverPassword = "1234";
+
     // Approver user credentials
     const String approverEmail = "approver@perkeso.gov.my";
     const String approverPassword = "1234";
@@ -135,15 +142,24 @@ class _LoginPageState extends State<LoginPage> {
     const String correctEmail = "user@perkeso.gov.my";
     const String correctPassword = "1234";
 
-    // Check for approver credentials first
-    if (email == approverEmail && password == approverPassword) {
+    // --- CHANGE: Updated logic to check for all user roles ---
+    // Check for driver credentials
+    if (email == driverEmail && password == driverPassword) {
+      setState(() => errorMessage = null);
+      if (!mounted) return;
+      // Navigate to the Driver Dashboard
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/dridash', (route) => false);
+    }
+    // Check for approver credentials
+    else if (email == approverEmail && password == approverPassword) {
       setState(() => errorMessage = null);
       if (!mounted) return;
       // Navigate to the Approver Dashboard
       Navigator.of(context)
           .pushNamedAndRemoveUntil('/appdash', (route) => false);
     }
-    // Then, check for regular user credentials
+    // Check for regular user credentials
     else if (email == correctEmail && password == correctPassword) {
       setState(() => errorMessage = null);
       if (!mounted) return;
@@ -151,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.of(context)
           .pushNamedAndRemoveUntil('/dashboard', (route) => false);
     }
-    // If neither matches, show an error
+    // If no credentials match, show an error
     else {
       setState(() {
         errorMessage = "Email or password entered is incorrect.";

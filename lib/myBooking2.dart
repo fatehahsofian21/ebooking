@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 // NEW: Import the rating bar package
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:ibooking/Vbooking.dart';
-import 'package:ibooking/Vcalendar.dart';
+import 'package:ibooking/dashboard2.dart'; // Make sure this import is correct
 import 'package:ibooking/dashboard.dart'; // Needed for MyCalendar's home navigation
 
 const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
@@ -324,7 +324,6 @@ class BookingDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // MODIFIED: Get status for easier reference
     final String status = booking['status'] ?? 'UNKNOWN';
 
     return Scaffold(
@@ -365,7 +364,6 @@ class BookingDetailsPage extends StatelessWidget {
                     const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
                     const SizedBox(height: 16),
                     
-                    // --- MODIFIED: Conditionally display Booking ID ---
                     if (status == 'APPROVED' || status == 'COMPLETE')
                       _buildInfoRow('Booking ID', booking['id'] ?? 'N/A'),
                       
@@ -395,9 +393,6 @@ class BookingDetailsPage extends StatelessWidget {
   }
 }
 
-// =========================================================================
-// MAIN PAGE: MyBooking2Page (REMAINS UNCHANGED)
-// =========================================================================
 class MyBooking2Page extends StatefulWidget {
   const MyBooking2Page({super.key});
 
@@ -406,7 +401,10 @@ class MyBooking2Page extends StatefulWidget {
 }
 
 class _MyBooking2PageState extends State<MyBooking2Page> {
+  // ======================= REFINED STATE =======================
   bool _isMyCalendarActive = false;
+  // =============================================================
+
   final PageController _pageController = PageController(initialPage: 120);
   final DateTime _baseMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
   static const _monthNames = <String>[
@@ -489,7 +487,9 @@ class _MyBooking2PageState extends State<MyBooking2Page> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // ======================= REFINED: ORIGINAL TOGGLE IS BACK =======================
               _buildCalendarToggle(),
+              // ===============================================================================
               Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
@@ -536,12 +536,14 @@ class _MyBooking2PageState extends State<MyBooking2Page> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
+        currentIndex: 2, // Highlight "My Bookings"
         onTap: (i) {
+          if (i == 2) return; // Do nothing if already on this page
+          
           if (i == 0) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VCalendarPage()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Dashboard2Screen()));
           } else if (i == 1) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VBookingPage()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const VBookingPage()));
           }
         },
         type: BottomNavigationBarType.fixed,
@@ -549,9 +551,18 @@ class _MyBooking2PageState extends State<MyBooking2Page> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Summary'),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Book Vehicle'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'My Bookings'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_outlined),
+            label: 'Vehicle List',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Book Vehicle',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            label: 'My Bookings',
+          ),
         ],
       ),
     );
@@ -876,7 +887,6 @@ class _MyBooking2PageState extends State<MyBooking2Page> {
     final verticalGaps = 8.0 + 8.0;
     final gridSpacing = 8.0 * (rows > 0 ? (rows - 1) : 0);
     
-    // The total height of the content inside the PageView
     final totalHeight = headerHeight + weekHeaderHeight + verticalGaps + (rows * cellHeight) + gridSpacing;
 
     return totalHeight;

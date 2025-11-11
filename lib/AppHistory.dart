@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:ibooking/AppBookingDetail.dart';
 import 'package:ibooking/AppDash.dart';
 import 'package:ibooking/approval.dart';
+import 'package:intl/intl.dart';
 
 // --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -13,14 +14,92 @@ const Color kPending = Color(0xFFF39F21);
 const Color kWarning = Color(0xFFA82525); // For Rejected
 const Color kComplete = Color(0xFF2ECC71); // For Completed
 
-// --- Dummy Booking Data for History ---
-final List<Map<String, dynamic>> allBookings = [
-  {'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING'},
-  {'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED'},
-  {'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE'},
-  {'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE'},
-  {'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED'},
+// Booking Model and Dummy Data (No changes needed here)
+class Booking {
+  final String requester;
+  final String department;
+  final String plate;
+  final String model;
+  final String pickupDate;
+  final String returnDate;
+  final String destination;
+  final String status;
+  final bool requireDriver;
+  final String? driverName;
+  final String? rejectionReason;
+
+  Booking({
+    required this.requester,
+    required this.department,
+    required this.plate,
+    required this.model,
+    required this.pickupDate,
+    required this.returnDate,
+    required this.destination,
+    required this.status,
+    this.requireDriver = false,
+    this.driverName,
+    this.rejectionReason,
+  });
+
+  DateTime? get _pickupDateTime => DateFormat("dd MMM yyyy hh:mm a").tryParse(pickupDate);
+  DateTime? get _returnDateTime => DateFormat("dd MMM yyyy hh:mm a").tryParse(returnDate);
+
+  String get displayDate {
+    final dt = _pickupDateTime;
+    return dt != null ? DateFormat('dd MMM yyyy').format(dt) : 'Invalid Date';
+  }
+
+  String get displayTime {
+    final pdt = _pickupDateTime;
+    final rdt = _returnDateTime;
+    if (pdt != null && rdt != null) {
+      return '${DateFormat('hh:mm a').format(pdt)} - ${DateFormat('hh:mm a').format(rdt)}';
+    }
+    return 'Invalid Time';
+  }
+
+  factory Booking.fromMap(Map<String, dynamic> map) {
+    return Booking(
+      requester: map['requester'] ?? 'N/A',
+      department: map['department'] ?? 'N/A',
+      plate: map['plate'] ?? 'N/A',
+      model: map['model'] ?? 'N/A',
+      pickupDate: map['pickupDate'] ?? 'N/A',
+      returnDate: map['returnDate'] ?? 'N/A',
+      destination: map['destination'] ?? 'N/A',
+      status: map['status'] ?? 'UNKNOWN',
+      requireDriver: map['requireDriver'] ?? false,
+      driverName: map['driverName'],
+      rejectionReason: map['rejectionReason'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'requester': requester,
+      'department': department,
+      'plate': plate,
+      'model': model,
+      'pickupDate': pickupDate,
+      'returnDate': returnDate,
+      'destination': destination,
+      'status': status,
+      'requireDriver': requireDriver,
+      'driverName': driverName,
+      'rejectionReason': rejectionReason,
+    };
+  }
+}
+
+final List<Booking> allBookings = [
+  Booking.fromMap({'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING', 'requireDriver': true}),
+  Booking.fromMap({'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED', 'requireDriver': true, 'driverName': 'Ismail Bin Sabri'}),
+  Booking.fromMap({'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE', 'requireDriver': false}),
+  Booking.fromMap({'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE', 'requireDriver': true, 'driverName': 'Chan Wei'}),
+  Booking.fromMap({'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED', 'rejectionReason': 'Vehicle is currently at the workshop for maintenance.'}),
 ];
+
 
 class AppHistoryPage extends StatefulWidget {
   const AppHistoryPage({super.key});
@@ -29,33 +108,28 @@ class AppHistoryPage extends StatefulWidget {
   State<AppHistoryPage> createState() => _AppHistoryPageState();
 }
 
-class _AppHistoryPageState extends State<AppHistoryPage> {
-  int _currentIndex = 2;
-  String _selectedStatus = 'All';
-  List<Map<String, dynamic>> _filteredBookings = [];
+// ======================= REFINED STATE FOR SWIPEABLE TABS =======================
+class _AppHistoryPageState extends State<AppHistoryPage> with SingleTickerProviderStateMixin {
+  int _bottomNavIndex = 2; // For the bottom navigation bar
+  late TabController _tabController;
 
   final List<String> _filterCategories = ['All', 'PENDING', 'APPROVED', 'COMPLETE', 'REJECTED'];
 
   @override
   void initState() {
     super.initState();
-    _filteredBookings = allBookings;
+    _tabController = TabController(length: _filterCategories.length, vsync: this);
   }
 
-  void _filterBookings(String status) {
-    setState(() {
-      _selectedStatus = status;
-      if (status == 'All') {
-        _filteredBookings = allBookings;
-      } else {
-        _filteredBookings = allBookings.where((booking) => booking['status'] == status).toList();
-      }
-    });
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  void _onTabTapped(int index) {
-    if (index == _currentIndex) return;
-    setState(() { _currentIndex = index; });
+  void _onBottomNavTapped(int index) {
+    if (index == _bottomNavIndex) return;
+    setState(() { _bottomNavIndex = index; });
 
     switch (index) {
       case 0:
@@ -67,6 +141,13 @@ class _AppHistoryPageState extends State<AppHistoryPage> {
     }
   }
 
+  List<Booking> _getFilteredBookings(String status) {
+    if (status == 'All') {
+      return allBookings;
+    }
+    return allBookings.where((booking) => booking.status == status).toList();
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,61 +156,38 @@ class _AppHistoryPageState extends State<AppHistoryPage> {
         title: const Text('Booking History'),
         backgroundColor: kPrimaryColor,
         foregroundColor: Colors.white,
-        // ======================= THIS IS THE ADDED BACK BUTTON =======================
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          tooltip: 'Back to Approvals',
+          tooltip: 'Back to Home',
           onPressed: () {
-            // Navigate back to the ApprovalPage
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const ApprovalPage()),
+              MaterialPageRoute(builder: (context) => const AppDash()),
             );
           },
         ),
-        // ===========================================================================
+        // The TabBar is placed at the bottom of the AppBar.
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withOpacity(0.7),
+          indicatorColor: Colors.white,
+          indicatorWeight: 3.0,
+          tabs: _filterCategories.map((category) => Tab(text: category)).toList(),
+        ),
       ),
-      body: Column(
-        children: [
-          // --- Filter Bar ---
-          Container(
-            height: 50,
-            color: Colors.white,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filterCategories.length,
-              itemBuilder: (context, index) {
-                final category = _filterCategories[index];
-                return _FilterButton(
-                  label: category == 'All' ? 'All' : category.toLowerCase().replaceFirst(category[0].toLowerCase(), category[0]),
-                  isSelected: _selectedStatus == category,
-                  onTap: () => _filterBookings(category),
-                );
-              },
-            ),
-          ),
-          // --- Booking List ---
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _filteredBookings.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      key: ValueKey(_selectedStatus),
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      itemCount: _filteredBookings.length,
-                      itemBuilder: (context, index) {
-                        final booking = _filteredBookings[index];
-                        return _HistoryCard(booking: booking);
-                      },
-                    ),
-            ),
-          ),
-        ],
+      // The body is now a TabBarView, which handles the swiping.
+      body: TabBarView(
+        controller: _tabController,
+        children: _filterCategories.map((status) {
+          final filteredList = _getFilteredBookings(status);
+          return _BookingList(key: ValueKey(status), bookings: filteredList);
+        }).toList(),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
+        currentIndex: _bottomNavIndex,
+        onTap: _onBottomNavTapped,
         backgroundColor: kPrimaryColor,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
@@ -142,162 +200,159 @@ class _AppHistoryPageState extends State<AppHistoryPage> {
       ),
     );
   }
-
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off_rounded, size: 60, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'No bookings found',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
 }
+// ====================================================================
 
-class _FilterButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+/// A reusable widget to display a list of bookings or an empty state message.
+class _BookingList extends StatelessWidget {
+  final List<Booking> bookings;
 
-  const _FilterButton({required this.label, required this.isSelected, required this.onTap});
+  const _BookingList({super.key, required this.bookings});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? kPrimaryColor : Colors.transparent,
-              width: 3.0,
-            ),
-          ),
+    if (bookings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 60, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No bookings found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          ],
         ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? kPrimaryColor : Colors.grey[700],
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 15,
-          ),
-        ),
-      ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: bookings.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _HistoryCard(booking: bookings[index]),
+        );
+      },
     );
   }
 }
 
+// --- History Card and Info Row Widgets (No changes needed) ---
 class _HistoryCard extends StatelessWidget {
-  final Map<String, dynamic> booking;
+  final Booking booking;
   const _HistoryCard({required this.booking});
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'PENDING':
-        return kPending;
-      case 'APPROVED':
-        return kApproved;
-      case 'COMPLETE':
-        return kComplete;
-      case 'REJECTED':
-      case 'CANCELED':
-        return kWarning;
-      default:
-        return Colors.grey;
+      case 'PENDING': return kPending;
+      case 'APPROVED': return kApproved;
+      case 'COMPLETE': return kComplete;
+      case 'REJECTED': return kWarning;
+      default: return Colors.grey;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String plate = booking['plate'] ?? 'N/A';
-    final String requester = booking['requester'] ?? 'N/A';
-    final String department = booking['department'] ?? 'N/A';
-    final String date = booking['pickupDate']?.split(' ')[0] ?? 'N/A';
-    final String time = (booking['pickupDate'] != null && booking['returnDate'] != null)
-        ? '${booking['pickupDate'].split(' ')[1]} ${booking['pickupDate'].split(' ')[2]} - ${booking['returnDate'].split(' ')[1]} ${booking['returnDate'].split(' ')[2]}'
-        : 'N/A';
-    final String status = booking['status'] ?? 'N/A';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AppBookingDetailPage(bookingDetails: booking.toMap(), sourcePage: 'history'),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(plate, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87)),
+                      Expanded(
+                        child: Text('${booking.model} (${booking.plate})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(status).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
+                        decoration: BoxDecoration(color: _getStatusColor(booking.status).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                        child: Text(booking.status, style: TextStyle(color: _getStatusColor(booking.status), fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(requester, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  const SizedBox(height: 4),
-                  Text(department, style: const TextStyle(color: Colors.black54, fontSize: 14)),
+                  const Divider(height: 24),
+                  _InfoRowWithIcon(icon: Icons.person_outline_rounded, text: booking.requester),
                   const SizedBox(height: 8),
-                  Text('$date • $time', style: const TextStyle(color: Colors.black87, fontSize: 14)),
+                  _InfoRowWithIcon(icon: Icons.business_rounded, text: booking.department),
+                  const SizedBox(height: 8),
+                  _InfoRowWithIcon(icon: Icons.calendar_today_rounded, text: '${booking.displayDate} • ${booking.displayTime}'),
+                  if (booking.driverName != null) ...[
+                    const SizedBox(height: 8),
+                    _InfoRowWithIcon(icon: Icons.person_pin_circle_outlined, text: 'Driver: ${booking.driverName}', iconColor: Colors.blueGrey),
+                  ],
+                  if (booking.rejectionReason != null) ...[
+                    const SizedBox(height: 8),
+                    _InfoRowWithIcon(icon: Icons.info_outline_rounded, text: 'Reason: ${booking.rejectionReason}', iconColor: kWarning, textColor: kWarning),
+                  ]
                 ],
               ),
             ),
-            const Divider(height: 1),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AppBookingDetailPage(
-                        bookingDetails: booking,
-                        sourcePage: 'history',
-                      ),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: kPrimaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(14),
-                      bottomRight: Radius.circular(14),
-                    ),
-                  ),
-                ),
-                child: const Text('See More', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.05),
+                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(14), bottomRight: Radius.circular(14)),
+              ),
+              child: const Center(
+                child: Text('See More', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: kPrimaryColor)),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InfoRowWithIcon extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color iconColor;
+  final Color textColor;
+
+  const _InfoRowWithIcon({
+    required this.icon,
+    required this.text,
+    this.iconColor = Colors.grey,
+    this.textColor = Colors.black54,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
     );
   }
 }

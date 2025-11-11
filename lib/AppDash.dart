@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/AppBookingDetail.dart';
-import 'package:ibooking/approval.dart'; // Import the new approval page
-import 'package:ibooking/dashboard.dart'; // <<< 1. ADD THIS IMPORT
+import 'package:ibooking/approval.dart';
 import 'package:ibooking/dashboard2.dart';
 import 'package:ibooking/main.dart';
 
-// --- Brand Guideline Colors (Consistent with dashboard.dart) ---
+// --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
 const Color kBackgroundColor = Color(0xFFF5F5F5);
 
@@ -17,32 +16,72 @@ class AppDash extends StatefulWidget {
   State<AppDash> createState() => _AppDashState();
 }
 
-class _AppDashState extends State<AppDash> {
-  // --- Dummy Data for Pending Approvals ---
+class _AppDashState extends State<AppDash> with SingleTickerProviderStateMixin {
+  // ======================= REFINED DUMMY DATA =======================
+  // Added 'uploadedDocName' to ensure the detail page has complete information.
   final List<Map<String, dynamic>> pendingApprovals = const [
     {
       'icon': Icons.directions_car,
       'title': 'Toyota Vellfire (VBB 1234)',
       'subtitle1': '31 Oct 2025 (Fri) • 9:00 AM - 11:00 AM',
       'subtitle2': 'Requested by: Siti Aisyah',
+      // --- Full Details ---
+      'requester': 'Siti Aisyah',
+      'department': 'Human Resources',
+      'model': 'Toyota Vellfire',
+      'plate': 'VBB 1234',
+      'pickupDate': '31 Oct 2025 • 9:00 AM',
+      'returnDate': '31 Oct 2025 • 11:00 AM',
+      'destination': 'KL Sentral',
+      'purpose': 'Meeting with external client',
+      'pax': 4,
+      'requireDriver': true,
+      'status': 'PENDING',
+      'uploadedDocName': 'Client_Meeting_Agenda.pdf', // ADDED THIS FIELD
     },
     {
       'icon': Icons.directions_bus,
       'title': 'Scania Touring (BUS 8899)',
       'subtitle1': '03 Nov 2025 (Mon) • 2:00 PM - 5:00 PM',
       'subtitle2': 'Requested by: Razak Bin Ali',
+      // --- Full Details ---
+      'requester': 'Razak Bin Ali',
+      'department': 'Administration',
+      'model': 'Scania Touring',
+      'plate': 'BUS 8899',
+      'pickupDate': '03 Nov 2025 • 2:00 PM',
+      'returnDate': '03 Nov 2025 • 5:00 PM',
+      'destination': 'Putrajaya',
+      'purpose': 'Official Government Business',
+      'pax': 25,
+      'requireDriver': true,
+      'status': 'PENDING',
+      'uploadedDocName': null, // Example with no document
     },
     {
       'icon': Icons.local_taxi,
       'title': 'Proton X50 (VCD 5678)',
       'subtitle1': '04 Nov 2025 (Tue) • 1:00 PM - 3:00 PM',
       'subtitle2': 'Requested by: Michael Chen',
+      // --- Full Details ---
+      'requester': 'Michael Chen',
+      'department': 'Sales & Marketing',
+      'model': 'Proton X50',
+      'plate': 'VCD 5678',
+      'pickupDate': '04 Nov 2025 • 1:00 PM',
+      'returnDate': '04 Nov 2025 • 3:00 PM',
+      'destination': 'Cyberjaya',
+      'purpose': 'Product Demonstration',
+      'pax': 2,
+      'requireDriver': false,
+      'status': 'PENDING',
+      'uploadedDocName': 'Product_Demo_Slides.pdf', // ADDED THIS FIELD
     },
   ];
+  // ====================================================================
 
   bool _isStackExpanded = false;
 
-  // --- Logout Logic ---
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -55,7 +94,6 @@ class _AppDashState extends State<AppDash> {
         ],
       ),
     );
-
     if (confirmed == true && context.mounted) {
       await _logout(context);
     }
@@ -70,7 +108,6 @@ class _AppDashState extends State<AppDash> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Constants for card layout calculations ---
     const double cardHeight = 88.0;
     const double verticalSpacingExpanded = 12.0;
     const double verticalOffsetCollapsed = 18.0;
@@ -79,273 +116,221 @@ class _AppDashState extends State<AppDash> {
     final double expandedHeight = (cardHeight * pendingApprovals.length) + (verticalSpacingExpanded * (pendingApprovals.length - 1));
 
     return Scaffold(
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark.copyWith(
-          statusBarColor: Colors.transparent,
-        ),
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: kBackgroundColor,
-          child: Stack(
-            children: [
-              // Layer 1: Header Image
-              SizedBox(
-                width: double.infinity,
-                height: 260,
-                child: ClipPath(
-                  clipper: _StraightHeaderClipper(),
-                  child: Image.asset('assets/bangunan.jpg', fit: BoxFit.cover, alignment: Alignment.topCenter),
-                ),
+      backgroundColor: kBackgroundColor,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 280.0,
+            backgroundColor: kPrimaryColor,
+            pinned: true,
+            stretch: true,
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
+                tooltip: 'Log out',
+                onPressed: () => _confirmLogout(context),
               ),
-
-              // Layer 2: Logout Button
-              Positioned(
-                top: 40,
-                right: 16,
-                child: IconButton(
-                  icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
-                  tooltip: 'Log out',
-                  onPressed: () => _confirmLogout(context),
-                ),
-              ),
-
-              // --- FIXED HEADER AND SCROLLABLE BODY ---
-              Column(
-                children: [
-                  // --- PART A: FIXED CONTENT ---
-                  const SizedBox(height: 280 + 48),
-                  const Text('Ahmad Bin Hassan', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                  const SizedBox(height: 4),
-                  Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                  const SizedBox(height: 30),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _DashboardButton(
-                          iconData: Icons.meeting_room,
-                          label: 'Meeting Room',
-                          onTap: () {},
-                        ),
-                        _DashboardButton(
-                          iconData: Icons.directions_car,
-                          label: 'Vehicle',
-                          // ======================= 2. UPDATE THIS ONTAP =======================
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const Dashboard2Screen()),
-                            );
-                          },
-                          // ====================================================================
-                        ),
-                        _DashboardButton(
-                          iconData: Icons.playlist_add_check_rounded,
-                          label: 'Approval',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ApprovalPage()),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 25),
-
-                  // --- PART B: SCROLLABLE CONTENT ---
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                if (_isStackExpanded) {
-                                  setState(() {
-                                    _isStackExpanded = false;
-                                  });
-                                }
-                              },
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Pending Approval (${pendingApprovals.length})',
-                                  style: TextStyle(color: Colors.red.shade700, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (pendingApprovals.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (!_isStackExpanded) {
-                                    setState(() {
-                                      _isStackExpanded = true;
-                                    });
-                                  }
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 350),
-                                  curve: Curves.easeOutCubic,
-                                  height: _isStackExpanded ? expandedHeight : stackedHeight,
-                                  child: Stack(
-                                    children: List.generate(pendingApprovals.length, (index) {
-                                      final item = pendingApprovals[index];
-                                      final topPosition = _isStackExpanded
-                                          ? index * (cardHeight + verticalSpacingExpanded)
-                                          : index * verticalOffsetCollapsed;
-
-                                      return AnimatedPositioned(
-                                        duration: const Duration(milliseconds: 350),
-                                        curve: Curves.easeOutCubic,
-                                        top: topPosition,
-                                        left: 0,
-                                        right: 0,
-                                        child: AbsorbPointer(
-                                          absorbing: !_isStackExpanded,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => AppBookingDetailPage(
-                                                    bookingDetails: item,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child: _buildApprovalCard(
-                                              icon: item['icon'],
-                                              title: item['title'],
-                                              subtitle1: item['subtitle1'],
-                                              subtitle2: item['subtitle2'],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).reversed.toList(),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 24),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 36.0),
-                            child: Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 2),
-                                        Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Positioned(
-                top: 220,
-                left: 0,
-                right: 0,
-                child: Center(
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [StretchMode.zoomBackground, StretchMode.fadeTitle],
+              background: Image.asset('assets/bangunan.jpg', fit: BoxFit.cover),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: Container(
+                transform: Matrix4.translationValues(0.0, 30.0, 0.0),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.white,
                   child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: Colors.white,
+                    radius: 46,
                     backgroundImage: const AssetImage('assets/profile.png'),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildApprovalCard({
-    required IconData icon,
-    required String title,
-    required String subtitle1,
-    required String subtitle2,
-  }) {
-    return Container(
-      height: 88.0,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon, size: 32, color: kPrimaryColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(subtitle1, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(subtitle2, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ],
             ),
+          ),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const SizedBox(height: 45),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Ahmad Bin Hassan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+                    child: Text('Approver', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('Bahagian Strategi dan Transformasi & ICT', style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+              const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _DashboardButton(iconData: Icons.meeting_room, label: 'Meeting Room', onTap: () {}),
+                    _DashboardButton(iconData: Icons.directions_car, label: 'Vehicle', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Dashboard2Screen()))),
+                    _DashboardButton(iconData: Icons.playlist_add_check_rounded, label: 'Approval', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ApprovalPage()))),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Row(
+                  children: [
+                    Text(
+                      'Pending Approval (${pendingApprovals.length})',
+                      style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(width: 8),
+                    if (pendingApprovals.isNotEmpty) const _PulsingDot(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (pendingApprovals.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isStackExpanded = !_isStackExpanded),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOutCubic,
+                      height: _isStackExpanded ? expandedHeight : stackedHeight,
+                      child: Stack(
+                        children: List.generate(pendingApprovals.length, (index) {
+                          final item = pendingApprovals[index];
+                          final topPosition = _isStackExpanded ? index * (cardHeight + verticalSpacingExpanded) : index * verticalOffsetCollapsed;
+                          return AnimatedPositioned(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeOutCubic,
+                            top: topPosition,
+                            left: 0,
+                            right: 0,
+                            child: AbsorbPointer(
+                              absorbing: !_isStackExpanded,
+                              child: _buildApprovalCard(
+                                icon: item['icon'],
+                                title: item['title'],
+                                subtitle1: item['subtitle1'],
+                                subtitle2: item['subtitle2'],
+                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AppBookingDetailPage(bookingDetails: item))),
+                              ),
+                            ),
+                          );
+                        }).reversed.toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Text('Upcoming Booking', style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.directions_car, size: 32, color: kPrimaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Toyota Vellfire', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 2),
+                            Text('30 Oct 2025 (Thu) • 10:00 AM – 3:00 PM', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ]),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildApprovalCard({required IconData icon, required String title, required String subtitle1, required String subtitle2, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 88.0,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))]),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 32, color: kPrimaryColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(subtitle1, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(subtitle2, style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _StraightHeaderClipper extends CustomClipper<Path> {
+// --- Helper Widgets ---
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
   @override
-  Path getClip(Size size) {
-    final path = Path()..lineTo(0, size.height)..lineTo(size.width, size.height)..lineTo(size.width, 0)..close();
-    return path;
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
   }
+
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.red.shade700, shape: BoxShape.circle)),
+    );
+  }
 }
 
 class _DashboardButton extends StatelessWidget {
@@ -363,11 +348,7 @@ class _DashboardButton extends StatelessWidget {
           Container(
             height: 75,
             width: 75,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]),
             child: Icon(iconData, size: 38, color: kPrimaryColor),
           ),
           const SizedBox(height: 8),

@@ -658,7 +658,7 @@ class _MyBookingPageState extends State<MyBookingPage> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Summary'),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Vehicle List'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Book Vehicle'),
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), label: 'My Bookings'),
         ],
