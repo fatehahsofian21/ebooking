@@ -3,7 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ibooking/AppBookingDetail.dart'; // To navigate to details
+import 'package:ibooking/dashboard2.dart'; // IMPORT THIS
 import 'package:ibooking/main.dart'; // Needed for LoginPage navigation
+import 'package:ibooking/DriBookingList.dart'; // <--- NEW IMPORT
 
 // --- Brand Guideline Colors (Consistent with AppDash) ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -17,10 +19,7 @@ class DriDash extends StatefulWidget {
 }
 
 class _DriDashState extends State<DriDash> {
-  // ======================= REFINED DUMMY DATA =======================
-  // Each item is now a complete map, matching what AppBookingDetailPage expects.
-  // This prevents the RangeError and ensures no "N/A" values on the detail screen.
-
+  // ======================= DUMMY DATA =======================
   final List<Map<String, dynamic>> upcomingTrips = const [
     {
       'requester': 'Siti Aisyah', 'department': 'Human Resources',
@@ -36,13 +35,6 @@ class _DriDashState extends State<DriDash> {
       'destination': 'Melaka Heritage Trip', 'purpose': 'Company Outing',
       'pax': 40, 'requireDriver': true, 'status': 'APPROVED'
     },
-    {
-      'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department',
-      'model': 'Toyota Vellfire', 'plate': 'WPC 1234',
-      'pickupDate': '02 Nov 2025 (Sun) • 09:00 AM', 'returnDate': '02 Nov 2025 (Sun) • 11:00 AM',
-      'destination': 'Menara TM, Kuala Lumpur', 'purpose': 'Technical Support',
-      'pax': 3, 'requireDriver': true, 'status': 'APPROVED'
-    },
   ];
 
   final List<Map<String, dynamic>> upcomingBookings = const [
@@ -52,14 +44,6 @@ class _DriDashState extends State<DriDash> {
       'pickupDate': '05 Nov 2025 (Wed) • 10:00 AM', 'returnDate': '05 Nov 2025 (Wed) • 12:00 PM',
       'destination': 'Client Office, Petaling Jaya', 'purpose': 'Sales Pitch',
       'pax': 2, 'requireDriver': true, 'status': 'PENDING',
-      'icon': Icons.directions_car_rounded,
-    },
-    {
-      'requester': 'Aisha Khan', 'department': 'Finance',
-      'model': 'Honda City', 'plate': 'VFE 5543',
-      'pickupDate': '06 Nov 2025 (Thu) • 03:00 PM', 'returnDate': '06 Nov 2025 (Thu) • 04:00 PM',
-      'destination': 'Bank Negara Malaysia', 'purpose': 'Document Submission',
-      'pax': 1, 'requireDriver': true, 'status': 'PENDING',
       'icon': Icons.directions_car_rounded,
     },
   ];
@@ -104,6 +88,7 @@ class _DriDashState extends State<DriDash> {
             backgroundColor: kPrimaryColor,
             pinned: true,
             stretch: true,
+            automaticallyImplyLeading: false,
             systemOverlayStyle: SystemUiOverlayStyle.light,
             actions: [
               IconButton(
@@ -123,9 +108,9 @@ class _DriDashState extends State<DriDash> {
                 child: CircleAvatar(
                   radius: 50,
                   backgroundColor: Colors.white,
-                  child: CircleAvatar(
+                  child: const CircleAvatar(
                     radius: 46,
-                    backgroundImage: const AssetImage('assets/profile.png'),
+                    backgroundImage: AssetImage('assets/ahmad.jpg'),
                   ),
                 ),
               ),
@@ -155,8 +140,18 @@ class _DriDashState extends State<DriDash> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _DashboardButton(iconData: Icons.meeting_room, label: 'Meeting Room', onTap: () {}),
-                    _DashboardButton(iconData: Icons.directions_car, label: 'Vehicle', onTap: () {}),
-                    _DashboardButton(iconData: Icons.navigation_rounded, label: 'Trip', onTap: () {}),
+                    // ============== MODIFICATION: Vehicle Button Navigation ==============
+                    _DashboardButton(
+                      iconData: Icons.directions_car,
+                      label: 'Vehicle',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Dashboard2Screen())),
+                    ),
+                    // ============== MODIFICATION: Trip Button Navigation to DriBookingListPage ==============
+                    _DashboardButton(
+                      iconData: Icons.navigation_rounded, 
+                      label: 'Trip', 
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriBookingListPage())), // <--- FIXED LINE
+                    ),
                   ],
                 ),
               ),
@@ -167,6 +162,7 @@ class _DriDashState extends State<DriDash> {
                 isExpanded: _isTripStackExpanded,
                 onToggle: () => setState(() => _isTripStackExpanded = !_isTripStackExpanded),
                 cardBuilder: (item) => _TripInfoCard(item: item, onTap: () => _navigateToDetails(item)),
+                showPulsingDot: true,
               ),
               const SizedBox(height: 24),
               _CollapsibleCardStack(
@@ -184,15 +180,21 @@ class _DriDashState extends State<DriDash> {
     );
   }
 
+  // ============== MODIFICATION: Pass userRole to Detail Page ==============
   void _navigateToDetails(Map<String, dynamic> item) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AppBookingDetailPage(bookingDetails: item),
+        builder: (_) => AppBookingDetailPage(
+          bookingDetails: item,
+          userRole: 'driver', // Pass the role here
+        ),
       ),
     );
   }
 }
+
+// --- All helper widgets below this line are unchanged ---
 
 class _CollapsibleCardStack extends StatelessWidget {
   final String title;
@@ -200,6 +202,7 @@ class _CollapsibleCardStack extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
   final Widget Function(Map<String, dynamic> item) cardBuilder;
+  final bool showPulsingDot;
 
   const _CollapsibleCardStack({
     required this.title,
@@ -207,14 +210,12 @@ class _CollapsibleCardStack extends StatelessWidget {
     required this.isExpanded,
     required this.onToggle,
     required this.cardBuilder,
+    this.showPulsingDot = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // ======================= RENDERFLEX FIX =======================
-    // Increased cardHeight to prevent overflow in the redesigned cards.
-    const double cardHeight = 125.0; 
-    // ===============================================================
+    const double cardHeight = 125.0;
     const double verticalSpacingExpanded = 12.0;
     const double verticalOffsetCollapsed = 18.0;
 
@@ -229,10 +230,22 @@ class _CollapsibleCardStack extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onToggle,
-            child: Text(
-              '$title (${items.length})',
-              style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-            ),
+            behavior: HitTestBehavior.translucent,
+            child: (showPulsingDot && hasItems)
+                ? Row(
+                    children: [
+                      Text(
+                        '$title (${items.length})',
+                        style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(width: 8),
+                      const _PulsingDot(),
+                    ],
+                  )
+                : Text(
+                    '$title (${items.length})',
+                    style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
           ),
           const SizedBox(height: 12),
           GestureDetector(
@@ -279,16 +292,14 @@ class _CollapsibleCardStack extends StatelessWidget {
   }
 }
 
-// ======================= NEW TRIP CARD WIDGET (FIXED) =======================
 class _TripInfoCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
 
   const _TripInfoCard({required this.item, required this.onTap});
-  
+
   @override
   Widget build(BuildContext context) {
-    // Extracting date and time from the full pickupDate string for display
     final pickupDateParts = (item['pickupDate'] ?? 'N/A • N/A').split('•');
     final date = pickupDateParts[0].trim();
     final time = pickupDateParts.length > 1 ? pickupDateParts[1].trim() : 'N/A';
@@ -296,7 +307,7 @@ class _TripInfoCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 125.0, // Increased height to fix overflow
+        height: 125.0,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -305,7 +316,7 @@ class _TripInfoCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceAround, // Better spacing
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Text(date, style: const TextStyle(color: kPrimaryColor, fontSize: 14, fontWeight: FontWeight.bold)),
             Text(time, style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500)),
@@ -318,7 +329,7 @@ class _TripInfoCard extends StatelessWidget {
     );
   }
 }
-// Helper for Trip Card to ensure consistent layout
+
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -341,7 +352,6 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// ======================= BOOKING CARD WIDGET (dashboard.dart style) =======================
 class _BookingInfoCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
@@ -353,7 +363,7 @@ class _BookingInfoCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 88.0, // Standard height for this card type
+        height: 88.0,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -383,7 +393,6 @@ class _BookingInfoCard extends StatelessWidget {
   }
 }
 
-// ======================= DASHBOARD BUTTON (Unchanged) =======================
 class _DashboardButton extends StatelessWidget {
   final IconData iconData;
   final String label;
@@ -410,6 +419,38 @@ class _DashboardButton extends StatelessWidget {
           Text(label, style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.red.shade700, shape: BoxShape.circle)),
     );
   }
 }

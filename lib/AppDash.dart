@@ -126,6 +126,10 @@ class _AppDashState extends State<AppDash> with SingleTickerProviderStateMixin {
             pinned: true,
             stretch: true,
             systemOverlayStyle: SystemUiOverlayStyle.light,
+            // ============== MODIFICATION START ==============
+            // This line removes the back arrow that Flutter automatically adds.
+            automaticallyImplyLeading: false,
+            // ============== MODIFICATION END ==============
             actions: [
               IconButton(
                 icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
@@ -146,7 +150,7 @@ class _AppDashState extends State<AppDash> with SingleTickerProviderStateMixin {
                   backgroundColor: Colors.white,
                   child: CircleAvatar(
                     radius: 46,
-                    backgroundImage: const AssetImage('assets/profile.png'),
+                    backgroundImage: const AssetImage('assets/ahmad.jpg'),
                   ),
                 ),
               ),
@@ -184,15 +188,19 @@ class _AppDashState extends State<AppDash> with SingleTickerProviderStateMixin {
               const SizedBox(height: 30),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Row(
-                  children: [
-                    Text(
-                      'Pending Approval (${pendingApprovals.length})',
-                      style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                    ),
-                    const SizedBox(width: 8),
-                    if (pendingApprovals.isNotEmpty) const _PulsingDot(),
-                  ],
+                child: GestureDetector(
+                  onTap: () => setState(() => _isStackExpanded = !_isStackExpanded),
+                  behavior: HitTestBehavior.translucent,
+                  child: Row(
+                    children: [
+                      Text(
+                        'Pending Approval (${pendingApprovals.length})',
+                        style: TextStyle(color: Colors.black.withOpacity(0.8), fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(width: 8),
+                      if (pendingApprovals.isNotEmpty) const _PulsingDot(),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

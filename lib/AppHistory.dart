@@ -14,8 +14,11 @@ const Color kPending = Color(0xFFF39F21);
 const Color kWarning = Color(0xFFA82525); // For Rejected
 const Color kComplete = Color(0xFF2ECC71); // For Completed
 
-// Booking Model and Dummy Data (No changes needed here)
+// =========================================================================
+// MODIFIED: Booking Model now includes bookingId.
+// =========================================================================
 class Booking {
+  final String bookingId; // <-- ID ADDED HERE
   final String requester;
   final String department;
   final String plate;
@@ -29,6 +32,7 @@ class Booking {
   final String? rejectionReason;
 
   Booking({
+    required this.bookingId, // <-- ID ADDED HERE
     required this.requester,
     required this.department,
     required this.plate,
@@ -61,6 +65,7 @@ class Booking {
 
   factory Booking.fromMap(Map<String, dynamic> map) {
     return Booking(
+      bookingId: map['bookingId'] ?? 'N/A', // <-- ID ADDED HERE
       requester: map['requester'] ?? 'N/A',
       department: map['department'] ?? 'N/A',
       plate: map['plate'] ?? 'N/A',
@@ -77,6 +82,7 @@ class Booking {
 
   Map<String, dynamic> toMap() {
     return {
+      'bookingId': bookingId, // <-- ID ADDED HERE
       'requester': requester,
       'department': department,
       'plate': plate,
@@ -92,12 +98,15 @@ class Booking {
   }
 }
 
+// =========================================================================
+// MODIFIED: Dummy data now includes a unique bookingId for each entry.
+// =========================================================================
 final List<Booking> allBookings = [
-  Booking.fromMap({'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING', 'requireDriver': true}),
-  Booking.fromMap({'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED', 'requireDriver': true, 'driverName': 'Ismail Bin Sabri'}),
-  Booking.fromMap({'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE', 'requireDriver': false}),
-  Booking.fromMap({'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE', 'requireDriver': true, 'driverName': 'Chan Wei'}),
-  Booking.fromMap({'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED', 'rejectionReason': 'Vehicle is currently at the workshop for maintenance.'}),
+  Booking.fromMap({'bookingId': 'BK1001', 'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING', 'requireDriver': true}),
+  Booking.fromMap({'bookingId': 'BK1002', 'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED', 'requireDriver': true, 'driverName': 'Ismail Bin Sabri'}),
+  Booking.fromMap({'bookingId': 'BK1003', 'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE', 'requireDriver': false}),
+  Booking.fromMap({'bookingId': 'BK1004', 'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE', 'requireDriver': true, 'driverName': 'Chan Wei'}),
+  Booking.fromMap({'bookingId': 'BK1005', 'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED', 'rejectionReason': 'Vehicle is currently at the workshop for maintenance.'}),
 ];
 
 
@@ -108,9 +117,8 @@ class AppHistoryPage extends StatefulWidget {
   State<AppHistoryPage> createState() => _AppHistoryPageState();
 }
 
-// ======================= REFINED STATE FOR SWIPEABLE TABS =======================
 class _AppHistoryPageState extends State<AppHistoryPage> with SingleTickerProviderStateMixin {
-  int _bottomNavIndex = 2; // For the bottom navigation bar
+  int _bottomNavIndex = 2;
   late TabController _tabController;
 
   final List<String> _filterCategories = ['All', 'PENDING', 'APPROVED', 'COMPLETE', 'REJECTED'];
@@ -166,7 +174,6 @@ class _AppHistoryPageState extends State<AppHistoryPage> with SingleTickerProvid
             );
           },
         ),
-        // The TabBar is placed at the bottom of the AppBar.
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -177,7 +184,6 @@ class _AppHistoryPageState extends State<AppHistoryPage> with SingleTickerProvid
           tabs: _filterCategories.map((category) => Tab(text: category)).toList(),
         ),
       ),
-      // The body is now a TabBarView, which handles the swiping.
       body: TabBarView(
         controller: _tabController,
         children: _filterCategories.map((status) {
@@ -201,9 +207,7 @@ class _AppHistoryPageState extends State<AppHistoryPage> with SingleTickerProvid
     );
   }
 }
-// ====================================================================
 
-/// A reusable widget to display a list of bookings or an empty state message.
 class _BookingList extends StatelessWidget {
   final List<Booking> bookings;
 
@@ -237,7 +241,6 @@ class _BookingList extends StatelessWidget {
   }
 }
 
-// --- History Card and Info Row Widgets (No changes needed) ---
 class _HistoryCard extends StatelessWidget {
   final Booking booking;
   const _HistoryCard({required this.booking});
@@ -265,6 +268,7 @@ class _HistoryCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
+              // The bookingId is now automatically included in the map.
               builder: (context) => AppBookingDetailPage(bookingDetails: booking.toMap(), sourcePage: 'history'),
             ),
           );
@@ -293,6 +297,11 @@ class _HistoryCard extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 24),
+                  // =============================================================
+                  // MODIFIED: Added a row to display the bookingId visibly.
+                  // =============================================================
+                  _InfoRowWithIcon(icon: Icons.confirmation_number_outlined, text: 'Booking ID: ${booking.bookingId}', iconColor: Colors.blueGrey),
+                  const SizedBox(height: 8),
                   _InfoRowWithIcon(icon: Icons.person_outline_rounded, text: booking.requester),
                   const SizedBox(height: 8),
                   _InfoRowWithIcon(icon: Icons.business_rounded, text: booking.department),

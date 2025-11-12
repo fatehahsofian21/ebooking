@@ -36,11 +36,14 @@ Color _statusColor(String? status) {
 class AppBookingDetailPage extends StatefulWidget {
   final Map<String, dynamic> bookingDetails;
   final String? sourcePage;
+  // This new property will determine the UI (e.g., 'approver' or 'driver')
+  final String userRole;
 
   const AppBookingDetailPage({
     super.key,
     required this.bookingDetails,
     this.sourcePage,
+    this.userRole = 'approver', // Default role is 'approver' if not specified
   });
 
   @override
@@ -53,9 +56,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   @override
   void initState() {
     super.initState();
-    // ======================= REFINED DATA HANDLING =======================
-    // This now correctly extracts all possible details passed from any source page.
+    // This logic to parse data from different sources remains the same
     bookingData = {
+      'bookingId': widget.bookingDetails['bookingId'] ?? 'N/A',
       'requester': widget.bookingDetails['requester'] ?? widget.bookingDetails['subtitle2']?.split(':').last.trim() ?? 'N/A',
       'department': widget.bookingDetails['department'] ?? 'N/A',
       'model': widget.bookingDetails['model'] ?? widget.bookingDetails['title']?.split('(').first.trim() ?? 'N/A',
@@ -70,13 +73,12 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       'purpose': widget.bookingDetails['purpose'] ?? 'N/A',
       'uploadedDocName': widget.bookingDetails['uploadedDocName'] ?? 'N/A',
       'status': widget.bookingDetails['status'] ?? 'PENDING',
-      'driverName': widget.bookingDetails['driverName'], // Captures the driver's name
-      'rejectionReason': widget.bookingDetails['rejectionReason'], // Captures the rejection reason
+      'driverName': widget.bookingDetails['driverName'],
+      'rejectionReason': widget.bookingDetails['rejectionReason'],
     };
-    // ====================================================================
   }
 
-  // --- DIALOG: For Rejecting a Booking ---
+  // --- All dialogs and helper functions for approvers remain unchanged ---
   Future<void> _showRejectDialog() async {
     final TextEditingController reasonController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -129,7 +131,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     );
   }
 
-  // --- DIALOG: For Approving (with driver assignment) ---
   Future<void> _showApproveDialog() async {
     final bool needsDriver = bookingData['requireDriver'] == true;
 
@@ -187,8 +188,14 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       );
     }
   }
+  
+  Future<void> _handleCompleteBooking() async {
+    await _showConfirmationDialog(
+      title: 'Booking Completed',
+      content: 'The booking has now been marked as completed.',
+    );
+  }
 
-  // --- DIALOG: Final confirmation for both Approve/Reject ---
   Future<void> _showConfirmationDialog({required String title, required String content}) async {
     await showDialog(
       context: context,
@@ -215,7 +222,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showActionButtons = (bookingData['status']?.toUpperCase() ?? 'PENDING') == 'PENDING';
+    // This boolean will control which UI elements are shown
+    final bool isDriver = widget.userRole == 'driver';
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
@@ -225,6 +233,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
+            // This existing navigation logic is preserved
             if (widget.sourcePage == 'approval') {
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ApprovalPage()));
             } else if (widget.sourcePage == 'history') {
@@ -235,20 +244,21 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           },
         ),
         title: const Text('Booking Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month_outlined, color: Colors.white),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => const Dialog(
-                  insetPadding: EdgeInsets.all(16),
-                  child: SuperCalendarDialogWidget(),
+        // The calendar icon is now conditional: it only shows if it's NOT a driver
+        actions: isDriver
+            ? [] // No actions for driver
+            : [
+                IconButton(
+                  icon: const Icon(Icons.calendar_month_outlined, color: Colors.white),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (context) => const Dialog(
+                      insetPadding: EdgeInsets.all(16),
+                      child: SuperCalendarDialogWidget(),
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
-        ],
+              ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -256,10 +266,14 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // This is the main conditional UI change for the header
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  child: _buildStatusTag(bookingData['status']),
+                  // If it's a driver, show the new date header. Otherwise, show the old status tag.
+                  child: isDriver
+                      ? _buildDriverHeader(bookingData['pickupDate'])
+                      : _buildStatusTag(bookingData['status']),
                 ),
               ),
               Container(
@@ -274,67 +288,189 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildInfoRow('Booking ID', bookingData['bookingId']),
                     _buildInfoRow('Requester', bookingData['requester']),
                     _buildInfoRow('Department', bookingData['department']),
-                    _buildInfoRow('Vehicle Type', bookingData['model']),
-                    _buildInfoRow('Plate Number', bookingData['plate']),
+
+                    // These rows are now conditional: only show if NOT a driver
+                    if (!isDriver) ...[
+                      _buildInfoRow('Vehicle Type', bookingData['model']),
+                      _buildInfoRow('Plate Number', bookingData['plate']),
+                    ],
+
                     _buildInfoRow('Pick-Up Date & Time', bookingData['pickupDate']),
                     _buildInfoRow('Return Date & Time', bookingData['returnDate']),
                     _buildInfoRow('Number of Pax', bookingData['pax'].toString()),
-                    _buildInfoRow('Require Driver', (bookingData['requireDriver'] == true) ? 'Yes' : 'No'),
+
+                    // This row is also conditional
+                    if (!isDriver)
+                      _buildInfoRow('Require Driver', (bookingData['requireDriver'] == true) ? 'Yes' : 'No'),
+                    
                     _buildInfoRow('Destination', bookingData['destination']),
                     _buildInfoRow('Pick-Up Location', bookingData['pickupLocation']),
                     _buildInfoRow('Return Location', bookingData['returnLocation']),
                     _buildInfoRow('Purpose of Booking', bookingData['purpose']),
                     _buildInfoRow('Supported Document', bookingData['uploadedDocName']),
-                    
-                    // ================= REFINED: Conditionally displays driver and rejection info =================
                     _buildInfoRow('Assigned Driver', bookingData['driverName']),
                     _buildHighlightedInfoRow('Reason for Rejection', bookingData['rejectionReason'], kRejectColor),
-                    // =========================================================================================
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
-              if (showActionButtons)
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.check_circle, size: 18),
-                        label: const Text('Approve'),
-                        onPressed: _showApproveDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kApproveColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.cancel, size: 18),
-                        label: const Text('Reject'),
-                        onPressed: _showRejectDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kRejectColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
             ],
           ),
         ),
       ),
+      // The bottom navigation bar now shows different buttons based on the role
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: isDriver
+            ? _buildDriverActionButtons()
+            : _buildApproverActionButtons(),
+      ),
     );
   }
 
+  // --- NEW WIDGETS FOR DRIVER VIEW ---
+
+  // New header widget for the driver's view
+  Widget _buildDriverHeader(String? pickupDate) {
+    final dateParts = (pickupDate ?? 'N/A • N/A').split('•');
+    final date = dateParts[0].trim();
+    final time = dateParts.length > 1 ? dateParts[1].trim() : '';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(date, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kPrimaryColor)),
+          const SizedBox(height: 4),
+          Text(time, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text('UPCOMING', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // New action buttons for the driver's view
+  Widget _buildDriverActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.cancel, size: 18),
+            label: const Text('Reject'),
+            onPressed: () {
+              // Add logic for driver to reject the trip
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kRejectColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.play_arrow_rounded, size: 18),
+            label: const Text('Start Trip'),
+            onPressed: () {
+              // Add logic to start the trip
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kPrimaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // --- EXISTING WIDGETS (REFACTORED AND UNCHANGED) ---
+
+  // This widget now specifically builds the buttons for the approver
+  Widget _buildApproverActionButtons() {
+    final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
+    final bool showPendingActions = currentStatus == 'PENDING';
+    final bool showApprovedActions = currentStatus == 'APPROVED';
+
+    if (showPendingActions) {
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.check_circle, size: 18),
+              label: const Text('Approve'),
+              onPressed: _showApproveDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kApproveColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.cancel, size: 18),
+              label: const Text('Reject'),
+              onPressed: _showRejectDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kRejectColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    
+    if (showApprovedActions) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.event_available, size: 18),
+          label: const Text('Complete Booking'),
+          onPressed: _handleCompleteBooking,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kCompletedColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      );
+    }
+    // Return an empty box if no actions are available for the current status
+    return const SizedBox.shrink();
+  }
+
+  // Helper Widgets (no changes needed for these)
   Widget _buildInfoRow(String title, String? value) {
     if (value == null || value == 'N/A' || value.trim().isEmpty) {
       return const SizedBox.shrink();
@@ -353,7 +489,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     );
   }
   
-  // REFINED: New helper widget for highlighted information like rejection reasons
   Widget _buildHighlightedInfoRow(String title, String? value, Color textColor) {
     if (value == null || value.trim().isEmpty) {
       return const SizedBox.shrink();
@@ -378,17 +513,18 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     );
   }
 
-  Widget _buildStatusTag(String status) {
+  Widget _buildStatusTag(String? status) {
+    final statusText = status ?? 'UNKNOWN';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: _statusColor(status), borderRadius: BorderRadius.circular(18)),
-      child: Text(status.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.8)),
+      decoration: BoxDecoration(color: _statusColor(statusText), borderRadius: BorderRadius.circular(18)),
+      child: Text(statusText.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.8)),
     );
   }
 }
 
 // =========================================================================
-// WIDGET: The Super Calendar functionality (No changes needed here)
+// WIDGET: The Super Calendar functionality (No changes needed)
 // =========================================================================
 class SuperCalendarDialogWidget extends StatefulWidget {
   const SuperCalendarDialogWidget({super.key});
