@@ -2,7 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:ibooking/AppHistory.dart';
+// Removed: import 'package:ibooking/DriTripMap.dart';
+// Removed: import 'package:ibooking/DriTripmap.dart'; 
 import 'package:ibooking/approval.dart';
+import 'package:url_launcher/url_launcher.dart'; // REQUIRED for call functionality
 
 // --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -33,10 +36,49 @@ Color _statusColor(String? status) {
   }
 }
 
+// =========================================================
+// CALL FUNCTIONALITY AND LOGIC
+// =========================================================
+
+// Enum to define the menu options
+enum CallOption { requester, admin }
+
+// Utility class for common driver actions
+class DriverActions {
+  // Mock Admin Phone Number
+  static const String adminPhoneNumber = '0322221111';
+
+  static Future<void> callNumber(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    
+    // FIX: Use named argument 'url' for canLaunchUrl and launchUrl
+    if (await canLaunchUrl(launchUri)) { 
+      await launchUrl(launchUri);
+    } else {
+      // ignore: avoid_print
+      print('Could not launch $phoneNumber');
+    }
+  }
+
+  static Future<void> callRequester(String phoneNumber) async {
+    await callNumber(phoneNumber);
+  }
+
+  static Future<void> callAdmin() async {
+    await callNumber(adminPhoneNumber);
+  }
+}
+
+// =========================================================
+// Main Detail Page Widget
+// =========================================================
+
 class AppBookingDetailPage extends StatefulWidget {
   final Map<String, dynamic> bookingDetails;
   final String? sourcePage;
-  // This new property will determine the UI (e.g., 'approver' or 'driver')
   final String userRole;
 
   const AppBookingDetailPage({
@@ -56,7 +98,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   @override
   void initState() {
     super.initState();
-    // This logic to parse data from different sources remains the same
+    // Added requesterPhone to bookingData for call logic
     bookingData = {
       'bookingId': widget.bookingDetails['bookingId'] ?? 'N/A',
       'requester': widget.bookingDetails['requester'] ?? widget.bookingDetails['subtitle2']?.split(':').last.trim() ?? 'N/A',
@@ -75,7 +117,74 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       'status': widget.bookingDetails['status'] ?? 'PENDING',
       'driverName': widget.bookingDetails['driverName'],
       'rejectionReason': widget.bookingDetails['rejectionReason'],
+      'requesterPhone': widget.bookingDetails['requesterPhone'] ?? 'N/A', // IMPORTANT: Pass phone number
     };
+  }
+
+  // Function to handle the menu selection
+  void _onCallOptionSelected(BuildContext context, CallOption result, String requesterPhone) {
+    switch (result) {
+      case CallOption.requester:
+        DriverActions.callRequester(requesterPhone);
+        break;
+      case CallOption.admin:
+        DriverActions.callAdmin();
+        break;
+    }
+  }
+
+  // NEW: Helper function to build the phone icon (no longer a FAB)
+  Widget _buildPhoneIconButton(String requesterPhone) {
+    final String status = bookingData['status'] ?? 'N/A';
+    final bool canCallRequester = widget.userRole == 'driver' && status.toUpperCase() == 'ASSIGNED' && requesterPhone != 'N/A';
+
+    final Color iconColor = canCallRequester ? Colors.green.shade600 : Colors.grey.shade400;
+
+    return PopupMenuButton<CallOption>(
+      onSelected: (result) => _onCallOptionSelected(context, result, requesterPhone),
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<CallOption>>[
+        // Option 1: Call Requester (only if phone is available and status is Assigned)
+        if (canCallRequester) 
+          PopupMenuItem<CallOption>(
+            value: CallOption.requester,
+            child: ListTile(
+              leading: const Icon(Icons.phone, color: kPrimaryColor),
+              title: const Text('Call Requester'),
+              subtitle: Text(requesterPhone),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          ),
+        // Option 2: Call Admin (always available for support)
+        PopupMenuItem<CallOption>(
+          value: CallOption.admin,
+          child: ListTile(
+            leading: const Icon(Icons.support_agent, color: kRejectColor),
+            title: const Text('Call Admin'),
+            subtitle: const Text(DriverActions.adminPhoneNumber),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+        ),
+      ],
+      // The Icon Button UI
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          Icons.phone_rounded,
+          color: iconColor,
+          size: 24,
+        ),
+      ),
+      // Position the menu above/next to the button
+      offset: const Offset(-20, 50), 
+      color: Colors.white,
+      elevation: 8,
+    );
   }
 
   // --- All dialogs and helper functions for approvers remain unchanged ---
@@ -150,7 +259,10 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 decoration: const InputDecoration(
                   labelText: 'Select a Driver',
                   border: OutlineInputBorder(),
+                  // ADDED: Set driverName as initial value if available
+                  hintText: 'Select a driver',
                 ),
+                value: bookingData['driverName']?.isNotEmpty == true ? bookingData['driverName'] : null,
                 items: drivers.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
                 onChanged: (value) => selectedDriver = value,
                 validator: (value) {
@@ -224,6 +336,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   Widget build(BuildContext context) {
     // This boolean will control which UI elements are shown
     final bool isDriver = widget.userRole == 'driver';
+    final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
+    final bool showCallButton = isDriver && (currentStatus == 'ASSIGNED'); // Call button only visible for 'ASSIGNED' driver trips
+
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
@@ -260,6 +375,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 ),
               ],
       ),
+      // Set FAB to null since the button is now in the header card
+      floatingActionButton: null, 
+      
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -272,7 +390,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                   padding: const EdgeInsets.only(bottom: 20.0),
                   // If it's a driver, show the new date header. Otherwise, show the old status tag.
                   child: isDriver
-                      ? _buildDriverHeader(bookingData['pickupDate'])
+                      ? _buildDriverHeader(bookingData['pickupDate'], showCallButton) // Pass showCallButton status
                       : _buildStatusTag(bookingData['status']),
                 ),
               ),
@@ -333,7 +451,7 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   // --- NEW WIDGETS FOR DRIVER VIEW ---
 
   // New header widget for the driver's view
-  Widget _buildDriverHeader(String? pickupDate) {
+  Widget _buildDriverHeader(String? pickupDate, bool showCallIcon) {
     final dateParts = (pickupDate ?? 'N/A • N/A').split('•');
     final date = dateParts[0].trim();
     final time = dateParts.length > 1 ? dateParts[1].trim() : '';
@@ -349,20 +467,40 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(date, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kPrimaryColor)),
-          const SizedBox(height: 4),
-          Text(time, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(date, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kPrimaryColor)),
+                    const SizedBox(height: 4),
+                    Text(time, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                  ],
+                ),
               ),
-              child: const Text('UPCOMING', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
+              
+              // NEW: Row for UPCOMING tag and Phone Icon
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('UPCOMING', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                  
+                  if (showCallIcon) ...[
+                    const SizedBox(width: 8),
+                    _buildPhoneIconButton(bookingData['requesterPhone']),
+                  ],
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -371,41 +509,73 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   
   // New action buttons for the driver's view
   Widget _buildDriverActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.cancel, size: 18),
-            label: const Text('Reject'),
-            onPressed: () {
-              // Add logic for driver to reject the trip
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kRejectColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    // Determine the status to show the correct buttons
+    final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
+    
+    if (currentStatus == 'ASSIGNED') {
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.cancel, size: 18),
+              label: const Text('Reject'),
+              onPressed: () {
+                // Add logic for driver to reject the trip
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kRejectColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.play_arrow_rounded, size: 18),
-            label: const Text('Start Trip'),
-            onPressed: () {
-              // Add logic to start the trip
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.play_arrow_rounded, size: 18),
+              label: const Text('Start Trip'),
+              onPressed: () {
+                // MODIFIED: No longer navigate to DriTripmap page.
+                // Replace with a default action or placeholder for now.
+                // ignore: avoid_print
+                print('Start Trip action triggered, but navigation is disabled.'); 
+                // Alternatively, you can show a Snackbar or Dialog
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   const SnackBar(content: Text('Navigation feature is currently disabled.')),
+                // );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             ),
           ),
+        ],
+      );
+    }
+    
+    if (currentStatus == 'IN_PROGRESS') {
+       return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.event_available, size: 18),
+          label: const Text('Complete Trip'),
+          onPressed: _handleCompleteBooking,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kCompletedColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         ),
-      ],
-    );
+      );
+    }
+
+    // Default to empty if status is Completed, Rejected, etc.
+    return const SizedBox.shrink();
   }
   
   // --- EXISTING WIDGETS (REFACTORED AND UNCHANGED) ---

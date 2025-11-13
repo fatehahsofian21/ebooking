@@ -20,31 +20,32 @@ class DriDash extends StatefulWidget {
 
 class _DriDashState extends State<DriDash> {
   // ======================= DUMMY DATA =======================
+  // NOTE: This data is kept from your latest version to ensure navigation to the detail page works correctly.
   final List<Map<String, dynamic>> upcomingTrips = const [
     {
-      'requester': 'Siti Aisyah', 'department': 'Human Resources',
+      'requester': 'Siti Aisyah', 'department': 'Human Resources', 'requesterPhone': '0123456789',
       'model': 'Honda HRV', 'plate': 'HRV 2023',
       'pickupDate': '28 Oct 2025 (Tue) • 02:00 PM', 'returnDate': '28 Oct 2025 (Tue) • 04:00 PM',
       'destination': 'Putrajaya Convention Centre', 'purpose': 'Official Meeting',
-      'pax': 2, 'requireDriver': true, 'status': 'APPROVED'
+      'pax': 2, 'requireDriver': true, 'status': 'ASSIGNED'
     },
     {
-      'requester': 'Razak Bin Ali', 'department': 'Administration',
+      'requester': 'Razak Bin Ali', 'department': 'Administration', 'requesterPhone': '0198765432',
       'model': 'Scania Touring Bus', 'plate': 'BUS 1122',
       'pickupDate': '25 Oct 2025 (Sat) • 08:00 AM', 'returnDate': '25 Oct 2025 (Sat) • 06:00 PM',
       'destination': 'Melaka Heritage Trip', 'purpose': 'Company Outing',
-      'pax': 40, 'requireDriver': true, 'status': 'APPROVED'
+      'pax': 40, 'requireDriver': true, 'status': 'ASSIGNED'
     },
   ];
 
   final List<Map<String, dynamic>> upcomingBookings = const [
     {
-      'requester': 'David Lim', 'department': 'Marketing',
+      'requester': 'David Lim', 'department': 'Marketing', 'requesterPhone': '01155554444',
       'model': 'Proton X70', 'plate': 'VDE 1121',
       'pickupDate': '05 Nov 2025 (Wed) • 10:00 AM', 'returnDate': '05 Nov 2025 (Wed) • 12:00 PM',
       'destination': 'Client Office, Petaling Jaya', 'purpose': 'Sales Pitch',
       'pax': 2, 'requireDriver': true, 'status': 'PENDING',
-      'icon': Icons.directions_car_rounded,
+      'icon': Icons.directions_car_rounded, // Icon used by the Booking Card
     },
   ];
   // ====================================================================
@@ -105,12 +106,12 @@ class _DriDashState extends State<DriDash> {
               preferredSize: const Size.fromHeight(60),
               child: Container(
                 transform: Matrix4.translationValues(0.0, 30.0, 0.0),
-                child: CircleAvatar(
+                child: const CircleAvatar(
                   radius: 50,
                   backgroundColor: Colors.white,
-                  child: const CircleAvatar(
+                  child: CircleAvatar(
                     radius: 46,
-                    backgroundImage: AssetImage('assets/ahmad.jpg'),
+                    backgroundImage: AssetImage('assets/profile.png'),
                   ),
                 ),
               ),
@@ -140,22 +141,21 @@ class _DriDashState extends State<DriDash> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _DashboardButton(iconData: Icons.meeting_room, label: 'Meeting Room', onTap: () {}),
-                    // ============== MODIFICATION: Vehicle Button Navigation ==============
                     _DashboardButton(
                       iconData: Icons.directions_car,
                       label: 'Vehicle',
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Dashboard2Screen())),
                     ),
-                    // ============== MODIFICATION: Trip Button Navigation to DriBookingListPage ==============
                     _DashboardButton(
-                      iconData: Icons.navigation_rounded, 
-                      label: 'Trip', 
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriBookingListPage())), // <--- FIXED LINE
+                      iconData: Icons.navigation_rounded,
+                      label: 'Trip',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriBookingListPage())),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 30),
+              // ============== MODIFICATION: Using the old card design ==============
               _CollapsibleCardStack(
                 title: 'Upcoming Trip',
                 items: upcomingTrips,
@@ -165,6 +165,7 @@ class _DriDashState extends State<DriDash> {
                 showPulsingDot: true,
               ),
               const SizedBox(height: 24),
+              // ============== MODIFICATION: Using the old card design ==============
               _CollapsibleCardStack(
                 title: 'Upcoming Booking',
                 items: upcomingBookings,
@@ -180,7 +181,6 @@ class _DriDashState extends State<DriDash> {
     );
   }
 
-  // ============== MODIFICATION: Pass userRole to Detail Page ==============
   void _navigateToDetails(Map<String, dynamic> item) {
     Navigator.push(
       context,
@@ -193,6 +193,111 @@ class _DriDashState extends State<DriDash> {
     );
   }
 }
+
+// --- NEW WIDGETS: The card designs you requested ---
+
+class _TripInfoCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+
+  const _TripInfoCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    // Safely split the date and time string
+    final pickupDateParts = (item['pickupDate'] ?? 'N/A • N/A').split('•');
+    final date = pickupDateParts[0].trim();
+    final time = pickupDateParts.length > 1 ? pickupDateParts[1].trim() : 'N/A';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 125.0, // Fixed height from previous design
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Text(date, style: const TextStyle(color: kPrimaryColor, fontSize: 14, fontWeight: FontWeight.bold)),
+            Text(time, style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500)),
+            const Divider(),
+            _InfoRow(icon: Icons.location_on_outlined, label: 'Destination:', value: item['destination'] ?? 'N/A'),
+            _InfoRow(icon: Icons.wysiwyg, label: 'Plate:', value: item['plate'] ?? 'N/A'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _InfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 13, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(value, style: TextStyle(color: Colors.grey[700], fontSize: 13), overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingInfoCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+
+  const _BookingInfoCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 88.0, // Fixed height from previous design
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(item['icon'] as IconData? ?? Icons.info, size: 32, color: kPrimaryColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${item['model']} (${item['plate']})', style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(item['pickupDate'] ?? 'N/A', style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // --- All helper widgets below this line are unchanged ---
 
@@ -215,7 +320,10 @@ class _CollapsibleCardStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double cardHeight = 125.0;
+    // Use different heights for trip vs booking cards
+    final bool isTrip = title.contains('Trip');
+    final double cardHeight = isTrip ? 125.0 : 88.0;
+
     const double verticalSpacingExpanded = 12.0;
     const double verticalOffsetCollapsed = 18.0;
 
@@ -287,107 +395,6 @@ class _CollapsibleCardStack extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TripInfoCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final VoidCallback onTap;
-
-  const _TripInfoCard({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final pickupDateParts = (item['pickupDate'] ?? 'N/A • N/A').split('•');
-    final date = pickupDateParts[0].trim();
-    final time = pickupDateParts.length > 1 ? pickupDateParts[1].trim() : 'N/A';
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 125.0,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Text(date, style: const TextStyle(color: kPrimaryColor, fontSize: 14, fontWeight: FontWeight.bold)),
-            Text(time, style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500)),
-            const Divider(),
-            _InfoRow(icon: Icons.location_on_outlined, label: 'Destination:', value: item['destination'] ?? 'N/A'),
-            _InfoRow(icon: Icons.wysiwyg, label: 'Plate:', value: item['plate'] ?? 'N/A'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _InfoRow({required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(value, style: TextStyle(color: Colors.grey[700], fontSize: 13), overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
-  }
-}
-
-class _BookingInfoCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final VoidCallback onTap;
-
-  const _BookingInfoCard({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 88.0,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(item['icon'] as IconData? ?? Icons.info, size: 32, color: kPrimaryColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('${item['model']} (${item['plate']})', style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(item['pickupDate'] ?? 'N/A', style: TextStyle(color: Colors.grey[700], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

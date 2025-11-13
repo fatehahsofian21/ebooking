@@ -7,7 +7,8 @@ import 'package:url_launcher/url_launcher.dart'; // To open phone dialer
 
 // --- Brand Guideline Colors (from DriDash.dart / approval.dart) ---
 const Color kPrimaryColor = Color(0xFF007DC5);
-const Color kBackgroundColor = Color(0xFFF5F5F5);
+// FIX: Corrected kBackgroundColor definition
+const Color kBackgroundColor = Color(0xFFF5F5F5); 
 const Color kAssignedColor = Color(0xFF007DC5); // Using Primary Color for Assigned status
 const Color kCompletedColor = Color(0xFF28a745);
 
@@ -63,6 +64,7 @@ class DriverActions {
       await launchUrl(launchUri);
     } else {
       // Fallback for environments where the dialer cannot be opened (e.g., web/desktop)
+      // ignore: avoid_print
       print('Could not launch $phoneNumber');
     }
   }
@@ -115,7 +117,7 @@ class _DriBookingListPageState extends State<DriBookingListPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: kBackgroundColor, // Ensures the SCaffold background is kBackgroundColor
       appBar: AppBar(
         title: const Text('My Assigned Trips'),
         backgroundColor: kPrimaryColor,
@@ -201,10 +203,25 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// Enum to define the menu options
+enum CallOption { requester, admin }
+
 // Widget for displaying an individual trip assignment
 class _TripAssignmentCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   const _TripAssignmentCard({required this.trip});
+
+  // Function to handle the menu selection
+  void _onCallOptionSelected(BuildContext context, CallOption result, String requesterPhone) {
+    switch (result) {
+      case CallOption.requester:
+        DriverActions.callRequester(requesterPhone);
+        break;
+      case CallOption.admin:
+        DriverActions.callAdmin();
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -232,11 +249,17 @@ class _TripAssignmentCard extends StatelessWidget {
     final String status = trip['status'] ?? 'N/A';
     final Color statusColor = status == 'Assigned' ? kAssignedColor : kCompletedColor;
     
+    // Check if both the status is Assigned AND the phone is available
+    final bool canCallRequester = status == 'Assigned' && requesterPhone != 'N/A';
+    
+    // Define the color for the call button
+    final Color callButtonColor = canCallRequester ? Colors.green.shade600 : Colors.grey.shade400;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white, // Card background remains WHITE
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
         ),
@@ -303,11 +326,13 @@ class _TripAssignmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center, 
               children: [
+                // 1. View Details Button (Expanded to take up all remaining space)
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.info_outline),
-                    label: const Text('View Details', style: TextStyle(fontSize: 12)),
+                    label: const Text('View Details', style: TextStyle(fontSize: 14)), 
                     onPressed: () {
                       // Navigate to the detail page, passing the trip data
                       Navigator.push(
@@ -315,7 +340,7 @@ class _TripAssignmentCard extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => AppBookingDetailPage(
                             bookingDetails: trip, 
-                            userRole: 'driver', // Pass the driver role for specific logic on details page
+                            userRole: 'driver',
                           ),
                         ),
                       );
@@ -323,41 +348,66 @@ class _TripAssignmentCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      // Ensures button height matches circular button
+                      padding: const EdgeInsets.symmetric(vertical: 14), 
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // NEW: Call Requester Button
-                if (status == 'Assigned' && requesterPhone != 'N/A')
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.phone, size: 20),
-                      label: const Text('Call Requester', style: TextStyle(fontSize: 12)),
-                      onPressed: () => DriverActions.callRequester(requesterPhone),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                
+                // Small gap between buttons
+                const SizedBox(width: 12),
+                
+                // 2. Call Options Menu Button (Fixed size circular icon)
+                SizedBox(
+                  width: 56, // Fixed width for a standard-sized circular button
+                  height: 56, // Fixed height for a standard-sized circular button
+                  child: PopupMenuButton<CallOption>(
+                    onSelected: (result) => _onCallOptionSelected(context, result, requesterPhone),
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<CallOption>>[
+                      // Option 1: Call Requester (only if phone is available)
+                      if (canCallRequester) 
+                        PopupMenuItem<CallOption>(
+                          value: CallOption.requester,
+                          child: ListTile(
+                            leading: const Icon(Icons.phone, color: kPrimaryColor),
+                            title: const Text('Call Requester'),
+                            subtitle: Text(requesterPhone),
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                          ),
+                        ),
+                      // Option 2: Call Admin (always available)
+                      PopupMenuItem<CallOption>(
+                        value: CallOption.admin,
+                        child: ListTile(
+                          leading: const Icon(Icons.support_agent, color: Colors.red),
+                          title: const Text('Call Admin'),
+                          subtitle: const Text(DriverActions.adminPhoneNumber),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                    ],
+                    // Child is the circular button itself
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: callButtonColor,
+                        shape: BoxShape.circle, // Make it circular
+                        boxShadow: [BoxShadow(color: callButtonColor.withOpacity(0.4), blurRadius: 8)],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          canCallRequester ? Icons.phone : Icons.phone_disabled,
+                          color: Colors.white,
+                          size: 24, // Slightly larger icon
+                        ),
                       ),
                     ),
-                  ),
-                if (status == 'Assigned' && requesterPhone != 'N/A')
-                  const SizedBox(width: 8),
-                // Call Admin Button (Always available for support)
-                SizedBox(
-                  width: 50,
-                  child: ElevatedButton(
-                    onPressed: () => DriverActions.callAdmin(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Icon(Icons.support_agent, size: 20),
+                    // Position the menu above the button
+                    offset: const Offset(0, -110), 
+                    color: Colors.white,
+                    elevation: 8,
                   ),
                 ),
               ],
