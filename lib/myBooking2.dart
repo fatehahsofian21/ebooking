@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:ibooking/Vbooking.dart';
 import 'package:ibooking/dashboard2.dart'; // Make sure this import is correct
+import 'package:url_launcher/url_launcher.dart'; // Import for document viewing
+
 // Needed for MyCalendar's home navigation
 
 const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
@@ -14,6 +16,13 @@ const Color kWarning = Color(0xFFA82525);     // Red (for rejected/canceled/erro
 const Color kHoliday = Color(0xFFE74C3C);     // Red for holidays
 const Color kComplete = Color(0xFF2ECC71);    // Green for complete status
 const Color kBorder = Color(0xFFCFD6DE);
+const Color kRejectColor = Color(0xFFdc3545); // Added for consistency
+const Color kApproveColor = Color(0xFF28a745); // Added for consistency
+
+// DUMMY CONSTANTS for document download/view (COPIED FROM PREVIOUS FILE)
+const String kDownloadBaseUrl = 'https://docs.google.com/gview?url=';
+const String kDummyPdfUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+
 
 // Centralized helper function to determine status color
 Color _statusColor(String status) {
@@ -61,7 +70,23 @@ class BookingDetailsPage extends StatelessWidget {
   final Map<String, dynamic> booking;
   const BookingDetailsPage({super.key, required this.booking});
 
+  // NEW: Function to handle the document download/view
+  Future<void> _launchDownloadUrl(String docName) async {
+    final String encodedUrl = Uri.encodeComponent(kDummyPdfUrl);
+    final Uri launchUri = Uri.parse('$kDownloadBaseUrl$encodedUrl');
+
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri, mode: LaunchMode.externalApplication); 
+    } else {
+      // ignore: avoid_print
+      print('Could not launch $launchUri');
+    }
+  }
+
   Widget _buildInfoRow(String title, String? value, {Color valueColor = const Color(0xFF2E3A59)}) {
+    if (value == null || value == 'N/A' || value.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Column(
@@ -77,7 +102,7 @@ class BookingDetailsPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            value ?? 'N/A',
+            value, // Use the non-null value here
             style: TextStyle(
               fontSize: 16,
               color: valueColor,
@@ -88,6 +113,92 @@ class BookingDetailsPage extends StatelessWidget {
       ),
     );
   }
+
+  // NEW: Info row for Downloadable Document (COPIED FROM PREVIOUS FILE)
+  Widget _buildDownloadableInfoRow(String title, String? docName) {
+    if (docName == null || docName == 'N/A' || docName.trim().isEmpty) {
+      return _buildInfoRow(title, 'No Document Uploaded');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF8B97A6))),
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: () => _launchDownloadUrl(docName), 
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.picture_as_pdf, color: kRejectColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  docName,
+                  style: const TextStyle(
+                    fontSize: 16, 
+                    color: kPrimaryColor, 
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.download, color: kPrimaryColor, size: 18),
+              ],
+            ),
+          ),
+          const Divider(height: 16),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Info row for Approved By (COPIED AND ADAPTED FROM REFERENCE)
+  Widget _buildApprovedByInfoRow(String? approvedBy, String? approvalDateTime) {
+    // Only show the box if there is an approvedBy name
+    if (approvedBy == null || approvedBy.trim().isEmpty || approvedBy.toUpperCase() == 'N/A') {
+      return const SizedBox.shrink();
+    }
+
+    final String approvedText = 'Approved by: $approvedBy';
+    // Format the date/time string using the helper
+    final String dateTimeText = 'Date/Time: ${_formatDateTime(approvalDateTime)}'; 
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: kApproveColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kApproveColor.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('APPROVAL DETAILS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: kApproveColor)),
+            const Divider(height: 12, color: Colors.transparent),
+            Row(
+              children: [
+                const Icon(Icons.person_pin, size: 18, color: kApproveColor),
+                const SizedBox(width: 8),
+                Expanded(child: Text(approvedText, style: const TextStyle(fontSize: 15, color: kApproveColor, fontWeight: FontWeight.w500))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.access_time_filled, size: 18, color: kApproveColor),
+                const SizedBox(width: 8),
+                Expanded(child: Text(dateTimeText, style: const TextStyle(fontSize: 15, color: kApproveColor, fontWeight: FontWeight.w500))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildStatusTag(String status) {
     return Container(
@@ -325,6 +436,11 @@ class BookingDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String status = booking['status'] ?? 'UNKNOWN';
+    final bool showApprovedDetails = status == 'APPROVED' || status == 'COMPLETE';
+    
+    // Extracting the assigned driver and approval time directly from the booking map
+    final String assignedDriver = booking['assignedDriver'] ?? 'N/A'; 
+    final String approvalDateTime = booking['approvalDateTime'] ?? '';
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
@@ -364,8 +480,18 @@ class BookingDetailsPage extends StatelessWidget {
                     const Text('Vehicle Booking Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimaryColor)),
                     const SizedBox(height: 16),
                     
-                    if (status == 'APPROVED' || status == 'COMPLETE')
-                      _buildInfoRow('Booking ID', booking['id'] ?? 'N/A'),
+                    if (showApprovedDetails) 
+                      // NEW: Use the Approval Info box for approved/complete status
+                      _buildApprovedByInfoRow(
+                        'Approver Name (Dummy)', // Approver name is not in the map, so I use a dummy string here.
+                        approvalDateTime,
+                      ),
+                    
+                    _buildInfoRow('Booking ID', booking['id'] ?? 'N/A'),
+                    
+                    // Display Assigned Driver only if explicitly present and status is approved/complete
+                    if (showApprovedDetails && assignedDriver.toUpperCase() != 'N/A')
+                      _buildInfoRow('Assigned Driver', assignedDriver),
                       
                     _buildInfoRow('Vehicle Type', '${booking['vehicle'] ?? 'N/A'} (${booking['model'] ?? 'N/A'})'),
                     _buildInfoRow('Plate Number', booking['plate'] ?? 'N/A'),
@@ -377,7 +503,10 @@ class BookingDetailsPage extends StatelessWidget {
                     _buildInfoRow('Pick-Up Location', booking['pickupLocation']),
                     _buildInfoRow('Return Location', booking['returnLocation']),
                     _buildInfoRow('Purpose of Booking', booking['purpose']),
-                    _buildInfoRow('Supported Document', booking['uploadedDocName'] ?? 'No document uploaded'),
+                    
+                    // Show Downloadable Document for all statuses
+                    _buildDownloadableInfoRow('Supported Document', booking['uploadedDocName']),
+                    
                     if (status == 'REJECTED' && booking['rejectionReason'] != null)
                       _buildInfoRow('Rejection Reason', booking['rejectionReason'], valueColor: kWarning),
                   ],
@@ -424,10 +553,11 @@ class _MyBooking2PageState extends State<MyBooking2Page> {
   List<Map<String, dynamic>>? _bookingsForSelectedDateMy;
   final Map<int, List<Map<String, dynamic>>> bookingsByDayMy = {};
   final List<Map<String, dynamic>> _allMyBookings = [
-    {'id': '1', 'vehicle': 'Car', 'plate': 'WPC1234', 'status': 'PENDING', 'pickupDate': '2025-10-05 10:00', 'returnDate': '2025-10-05 14:00', 'model': 'Toyota Vios', 'pax': 2, 'requireDriver': true, 'destination': 'Kuala Lumpur Convention Centre', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Official meeting.', 'uploadedDocName': 'meeting_req.pdf'},
-    {'id': '2', 'vehicle': 'Van', 'plate': 'VAN9988', 'status': 'APPROVED', 'pickupDate': '2025-10-09 14:00', 'returnDate': '2025-10-09 17:00', 'model': 'Toyota Hiace', 'pax': 5, 'requireDriver': false, 'destination': 'Klang Valley Site A', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'Klang Valley Site A', 'purpose': 'Site inspection.', 'uploadedDocName': null},
-    {'id': '6', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit.', 'uploadedDocName': null},
-    {'id': '7', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf', 'rejectionReason': 'Vehicle is unavailable due to maintenance.'},
+    // ADDED DUMMY DRIVER AND APPROVAL TIME
+    {'id': '1', 'vehicle': 'Car', 'plate': 'WPC1234', 'status': 'PENDING', 'pickupDate': '2025-10-05 10:00', 'returnDate': '2025-10-05 14:00', 'model': 'Toyota Vios', 'pax': 2, 'requireDriver': true, 'destination': 'Kuala Lumpur Convention Centre', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Official meeting.', 'uploadedDocName': 'meeting_req.pdf', 'assignedDriver': 'N/A', 'approvalDateTime': null},
+    {'id': '2', 'vehicle': 'Van', 'plate': 'VAN9988', 'status': 'APPROVED', 'pickupDate': '2025-10-09 14:00', 'returnDate': '2025-10-09 17:00', 'model': 'Toyota Hiace', 'pax': 5, 'requireDriver': false, 'destination': 'Klang Valley Site A', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'Klang Valley Site A', 'purpose': 'Site inspection.', 'uploadedDocName': null, 'assignedDriver': 'Bala Subramaniam', 'approvalDateTime': '2025-10-09 10:30'},
+    {'id': '6', 'vehicle': 'Car', 'plate': 'CAR1234', 'status': 'COMPLETE', 'pickupDate': '2025-10-20 09:00', 'returnDate': '2025-10-20 12:00', 'model': 'Toyota Vios', 'pax': 3, 'requireDriver': false, 'destination': 'Bandar Sunway', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Client visit.', 'uploadedDocName': null, 'assignedDriver': 'Chan Wei Lun', 'approvalDateTime': '2025-10-18 15:00'},
+    {'id': '7', 'vehicle': 'Car', 'plate': 'CAR6677', 'status': 'REJECTED', 'pickupDate': '2025-10-22 10:00', 'returnDate': '2025-10-22 14:00', 'model': 'Proton Persona', 'pax': 2, 'requireDriver': true, 'destination': 'Shah Alam Factory', 'pickupLocation': 'PERKESO JALAN AMPANG', 'returnLocation': 'PERKESO JALAN AMPANG', 'purpose': 'Machine inspection.', 'uploadedDocName': 'inspection_list.pdf', 'rejectionReason': 'Vehicle is unavailable due to maintenance.', 'assignedDriver': 'N/A', 'approvalDateTime': null},
   ];
 
   @override

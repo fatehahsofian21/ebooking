@@ -15,10 +15,10 @@ const Color kWarning = Color(0xFFA82525); // For Rejected
 const Color kComplete = Color(0xFF2ECC71); // For Completed
 
 // =========================================================================
-// MODIFIED: Booking Model now includes bookingId.
+// MODIFIED: Booking Model now includes uploadedDocName.
 // =========================================================================
 class Booking {
-  final String bookingId; // <-- ID ADDED HERE
+  final String bookingId; 
   final String requester;
   final String department;
   final String plate;
@@ -30,9 +30,14 @@ class Booking {
   final bool requireDriver;
   final String? driverName;
   final String? rejectionReason;
+  // --- NEW FIELD FOR DOCUMENT ---
+  final String? uploadedDocName; // <--- ADDED THIS
+  // --- EXISTING NEW FIELDS ---
+  final String? approvedBy;
+  final String? approvalDateTime;
 
   Booking({
-    required this.bookingId, // <-- ID ADDED HERE
+    required this.bookingId, 
     required this.requester,
     required this.department,
     required this.plate,
@@ -44,6 +49,11 @@ class Booking {
     this.requireDriver = false,
     this.driverName,
     this.rejectionReason,
+    // --- NEW FIELD FOR DOCUMENT ---
+    this.uploadedDocName, // <--- ADDED THIS
+    // --- EXISTING NEW FIELDS ---
+    this.approvedBy,
+    this.approvalDateTime,
   });
 
   DateTime? get _pickupDateTime => DateFormat("dd MMM yyyy hh:mm a").tryParse(pickupDate);
@@ -65,7 +75,7 @@ class Booking {
 
   factory Booking.fromMap(Map<String, dynamic> map) {
     return Booking(
-      bookingId: map['bookingId'] ?? 'N/A', // <-- ID ADDED HERE
+      bookingId: map['bookingId'] ?? 'N/A', 
       requester: map['requester'] ?? 'N/A',
       department: map['department'] ?? 'N/A',
       plate: map['plate'] ?? 'N/A',
@@ -77,12 +87,17 @@ class Booking {
       requireDriver: map['requireDriver'] ?? false,
       driverName: map['driverName'],
       rejectionReason: map['rejectionReason'],
+      // --- NEW FIELD FOR DOCUMENT ---
+      uploadedDocName: map['uploadedDocName'], // <--- ADDED THIS
+      // --- EXISTING NEW FIELDS ---
+      approvedBy: map['approvedBy'],
+      approvalDateTime: map['approvalDateTime'],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'bookingId': bookingId, // <-- ID ADDED HERE
+      'bookingId': bookingId, 
       'requester': requester,
       'department': department,
       'plate': plate,
@@ -94,19 +109,29 @@ class Booking {
       'requireDriver': requireDriver,
       'driverName': driverName,
       'rejectionReason': rejectionReason,
+      // --- NEW FIELD FOR DOCUMENT ---
+      'uploadedDocName': uploadedDocName, // <--- ADDED THIS
+      // --- EXISTING NEW FIELDS ---
+      'approvedBy': approvedBy,
+      'approvalDateTime': approvalDateTime,
     };
   }
 }
 
 // =========================================================================
-// MODIFIED: Dummy data now includes a unique bookingId for each entry.
+// MODIFIED: Dummy data now includes 'uploadedDocName'.
 // =========================================================================
 final List<Booking> allBookings = [
-  Booking.fromMap({'bookingId': 'BK1001', 'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING', 'requireDriver': true}),
-  Booking.fromMap({'bookingId': 'BK1002', 'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED', 'requireDriver': true, 'driverName': 'Ismail Bin Sabri'}),
-  Booking.fromMap({'bookingId': 'BK1003', 'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE', 'requireDriver': false}),
-  Booking.fromMap({'bookingId': 'BK1004', 'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE', 'requireDriver': true, 'driverName': 'Chan Wei'}),
-  Booking.fromMap({'bookingId': 'BK1005', 'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED', 'rejectionReason': 'Vehicle is currently at the workshop for maintenance.'}),
+  // Added 'uploadedDocName'
+  Booking.fromMap({'bookingId': 'BK1001', 'requester': 'Nor Fatehah Binti Sofian', 'department': 'ICT Department', 'plate': 'WPC1234', 'model': 'Toyota Vellfire', 'pickupDate': '02 Nov 2025 09:00 AM', 'returnDate': '02 Nov 2025 11:00 AM', 'destination': 'Menara TM, Kuala Lumpur', 'status': 'PENDING', 'requireDriver': true, 'uploadedDocName': 'ICT_Meeting_Proposal.pdf'}),
+  // Added 'uploadedDocName'
+  Booking.fromMap({'bookingId': 'BK1002', 'requester': 'Ahmad Bin Hassan', 'department': 'Management', 'plate': 'BOS 1', 'model': 'Mercedes S-Class', 'pickupDate': '01 Nov 2025 10:00 AM', 'returnDate': '01 Nov 2025 05:00 PM', 'destination': 'Prime Minister\'s Office', 'status': 'APPROVED', 'requireDriver': true, 'driverName': 'Ismail Bin Sabri', 'approvedBy': 'Dato\' CEO', 'approvalDateTime': '31 Oct 2025 09:30 AM', 'uploadedDocName': 'Official_Letter_PMO.pdf'}),
+  // Added 'uploadedDocName' (null example)
+  Booking.fromMap({'bookingId': 'BK1003', 'requester': 'Siti Aisyah', 'department': 'Human Resources', 'plate': 'HRV 2023', 'model': 'Honda HRV', 'pickupDate': '28 Oct 2025 02:00 PM', 'returnDate': '28 Oct 2025 04:00 PM', 'destination': 'Putrajaya Convention Centre', 'status': 'COMPLETE', 'requireDriver': false, 'approvedBy': 'Head of HR', 'approvalDateTime': '27 Oct 2025 11:00 AM', 'uploadedDocName': null}),
+  // Added 'uploadedDocName'
+  Booking.fromMap({'bookingId': 'BK1004', 'requester': 'Razak Bin Ali', 'department': 'Administration', 'plate': 'BUS 1122', 'model': 'Scania Touring Bus', 'pickupDate': '25 Oct 2025 08:00 AM', 'returnDate': '25 Oct 2025 06:00 PM', 'destination': 'Melaka Heritage Trip', 'status': 'COMPLETE', 'requireDriver': true, 'driverName': 'Chan Wei', 'approvedBy': 'HOD Admin', 'approvalDateTime': '24 Oct 2025 08:00 AM', 'uploadedDocName': 'Melaka_Itinerary.pdf'}),
+  // Added 'uploadedDocName'
+  Booking.fromMap({'bookingId': 'BK1005', 'requester': 'John Doe', 'department': 'Sales', 'plate': 'VEE 5566', 'model': 'Toyota Vios', 'pickupDate': '29 Oct 2025 11:00 AM', 'returnDate': '29 Oct 2025 01:00 PM', 'destination': 'Client Office - Damansara', 'status': 'REJECTED', 'rejectionReason': 'Vehicle is currently at the workshop for maintenance.', 'uploadedDocName': 'Sales_Report.pdf'}),
 ];
 
 
@@ -257,6 +282,7 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -268,7 +294,6 @@ class _HistoryCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              // The bookingId is now automatically included in the map.
               builder: (context) => AppBookingDetailPage(bookingDetails: booking.toMap(), sourcePage: 'history'),
             ),
           );
@@ -278,10 +303,11 @@ class _HistoryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Car Model (plate) and Status
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -296,28 +322,17 @@ class _HistoryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Divider(height: 24),
-                  // =============================================================
-                  // MODIFIED: Added a row to display the bookingId visibly.
-                  // =============================================================
-                  _InfoRowWithIcon(icon: Icons.confirmation_number_outlined, text: 'Booking ID: ${booking.bookingId}', iconColor: Colors.blueGrey),
-                  const SizedBox(height: 8),
-                  _InfoRowWithIcon(icon: Icons.person_outline_rounded, text: booking.requester),
-                  const SizedBox(height: 8),
-                  _InfoRowWithIcon(icon: Icons.business_rounded, text: booking.department),
-                  const SizedBox(height: 8),
-                  _InfoRowWithIcon(icon: Icons.calendar_today_rounded, text: '${booking.displayDate} • ${booking.displayTime}'),
-                  if (booking.driverName != null) ...[
-                    const SizedBox(height: 8),
-                    _InfoRowWithIcon(icon: Icons.person_pin_circle_outlined, text: 'Driver: ${booking.driverName}', iconColor: Colors.blueGrey),
-                  ],
-                  if (booking.rejectionReason != null) ...[
-                    const SizedBox(height: 8),
-                    _InfoRowWithIcon(icon: Icons.info_outline_rounded, text: 'Reason: ${booking.rejectionReason}', iconColor: kWarning, textColor: kWarning),
-                  ]
+                  const Divider(height: 12, thickness: 1),
+                  
+                  // Date Day
+                  _InfoRowWithIcon(
+                    icon: Icons.calendar_today_rounded, 
+                    text: booking.displayDate,
+                  ),
                 ],
               ),
             ),
+            // See More
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(

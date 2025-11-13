@@ -5,7 +5,7 @@ import 'package:ibooking/AppHistory.dart';
 // Removed: import 'package:ibooking/DriTripMap.dart';
 // Removed: import 'package:ibooking/DriTripmap.dart'; 
 import 'package:ibooking/approval.dart';
-import 'package:url_launcher/url_launcher.dart'; // REQUIRED for call functionality
+import 'package:url_launcher/url_launcher.dart'; 
 
 // --- Brand Guideline Colors ---
 const Color kPrimaryColor = Color(0xFF007DC5);
@@ -17,6 +17,12 @@ const Color kWarning = Color(0xFFA82525);
 const Color kPrimaryDarkColor = Color.fromARGB(255, 24, 42, 94);
 const Color kBorder = Color(0xFFCFD6DE);
 const Color kCompletedColor = Color(0xFF17a2b8);
+
+// DUMMY CONSTANTS for document download/view
+// This link uses a Google Docs viewer to simulate PDF viewing in the browser
+const String kDownloadBaseUrl = 'https://docs.google.com/gview?url=';
+// A publicly accessible dummy PDF for demonstration
+const String kDummyPdfUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
 // Helper function to determine the color of the status tag
 Color _statusColor(String? status) {
@@ -95,10 +101,19 @@ class AppBookingDetailPage extends StatefulWidget {
 class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   late final Map<String, dynamic> bookingData;
 
+  // NEW: Dummy car and driver data for the dialog
+  final List<String> availableDrivers = ['Ahmad', 'Bala', 'Chan'];
+  final List<Map<String, String>> availableVehicles = [
+    {'model': 'Toyota Vellfire', 'plate': 'WPC 1234'},
+    {'model': 'Honda City', 'plate': 'VCE 5678'},
+    {'model': 'Isuzu Bus', 'plate': 'BUS 8899'},
+  ];
+  // Helper to format vehicle string for dropdown
+  String _formatVehicle(Map<String, String> v) => '${v['model']} (${v['plate']})';
+
   @override
   void initState() {
     super.initState();
-    // Added requesterPhone to bookingData for call logic
     bookingData = {
       'bookingId': widget.bookingDetails['bookingId'] ?? 'N/A',
       'requester': widget.bookingDetails['requester'] ?? widget.bookingDetails['subtitle2']?.split(':').last.trim() ?? 'N/A',
@@ -117,7 +132,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       'status': widget.bookingDetails['status'] ?? 'PENDING',
       'driverName': widget.bookingDetails['driverName'],
       'rejectionReason': widget.bookingDetails['rejectionReason'],
-      'requesterPhone': widget.bookingDetails['requesterPhone'] ?? 'N/A', // IMPORTANT: Pass phone number
+      'requesterPhone': widget.bookingDetails['requesterPhone'] ?? 'N/A', 
+      'approvedBy': widget.bookingDetails['approvedBy'], 
+      'approvalDateTime': widget.bookingDetails['approvalDateTime'], 
     };
   }
 
@@ -132,8 +149,21 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         break;
     }
   }
+  
+  // NEW: Function to handle the document download/view
+  Future<void> _launchDownloadUrl(String docName) async {
+    final String encodedUrl = Uri.encodeComponent(kDummyPdfUrl);
+    final Uri launchUri = Uri.parse('$kDownloadBaseUrl$encodedUrl');
 
-  // NEW: Helper function to build the phone icon (no longer a FAB)
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri, mode: LaunchMode.externalApplication); 
+    } else {
+      // ignore: avoid_print
+      print('Could not launch $launchUri');
+    }
+  }
+
+  // Helper function to build the phone icon (no longer a FAB)
   Widget _buildPhoneIconButton(String requesterPhone) {
     final String status = bookingData['status'] ?? 'N/A';
     final bool canCallRequester = widget.userRole == 'driver' && status.toUpperCase() == 'ASSIGNED' && requesterPhone != 'N/A';
@@ -143,7 +173,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     return PopupMenuButton<CallOption>(
       onSelected: (result) => _onCallOptionSelected(context, result, requesterPhone),
       itemBuilder: (BuildContext context) => <PopupMenuEntry<CallOption>>[
-        // Option 1: Call Requester (only if phone is available and status is Assigned)
         if (canCallRequester) 
           PopupMenuItem<CallOption>(
             value: CallOption.requester,
@@ -155,7 +184,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
               dense: true,
             ),
           ),
-        // Option 2: Call Admin (always available for support)
         PopupMenuItem<CallOption>(
           value: CallOption.admin,
           child: ListTile(
@@ -167,7 +195,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           ),
         ),
       ],
-      // The Icon Button UI
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -180,14 +207,12 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           size: 24,
         ),
       ),
-      // Position the menu above/next to the button
       offset: const Offset(-20, 50), 
       color: Colors.white,
       elevation: 8,
     );
   }
 
-  // --- All dialogs and helper functions for approvers remain unchanged ---
   Future<void> _showRejectDialog() async {
     final TextEditingController reasonController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -240,65 +265,203 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     );
   }
 
+  // MODIFIED: Adjusted initial state logic and dropdown order for "No Driver"
   Future<void> _showApproveDialog() async {
     final bool needsDriver = bookingData['requireDriver'] == true;
+    final formKey = GlobalKey<FormState>();
 
-    if (needsDriver) {
-      final List<String> drivers = ['Ahmad', 'Bala', 'Chan'];
-      String? selectedDriver;
-      final formKey = GlobalKey<FormState>();
-
-      await showDialog(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Assign Driver'),
-            content: Form(
-              key: formKey,
-              child: DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Select a Driver',
-                  border: OutlineInputBorder(),
-                  // ADDED: Set driverName as initial value if available
-                  hintText: 'Select a driver',
-                ),
-                value: bookingData['driverName']?.isNotEmpty == true ? bookingData['driverName'] : null,
-                items: drivers.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                onChanged: (value) => selectedDriver = value,
-                validator: (value) {
-                  if (value == null) return 'Please select a driver.';
-                  return null;
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: kApproveColor),
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    Navigator.pop(dialogContext);
-                    _showConfirmationDialog(
-                      title: 'Booking Approved',
-                      content: 'The booking is approved and driver "$selectedDriver" has been assigned.',
-                    );
-                  }
-                },
-                child: const Text('Assign & Approve', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      _showConfirmationDialog(
-        title: 'Booking Approved',
-        content: 'The booking has been successfully approved.',
-      );
+    // ====================================================================
+    // FIX: Ensure initial vehicle value matches an item in the dropdown list
+    // ====================================================================
+    final String bookedModel = bookingData['model'] ?? 'N/A';
+    final String bookedPlate = bookingData['plate'] ?? 'N/A';
+    
+    // Find the vehicle in the available list. Use space-insensitive check on the plate 
+    // to handle formatting discrepancies (e.g., WPC1234 vs WPC 1234) for existing bookings.
+    Map<String, String>? matchingVehicle;
+    if (bookedModel != 'N/A' && bookedPlate != 'N/A') {
+      try {
+        matchingVehicle = availableVehicles.firstWhere(
+          (v) => v['model'] == bookedModel && 
+                 (v['plate']?.replaceAll(' ', '').toUpperCase() == bookedPlate.replaceAll(' ', '').toUpperCase()),
+        );
+      } catch (_) {
+        // Vehicle not found in the available list. initialSelectedVehicle will be null.
+      }
     }
+    
+    // Use the correctly formatted string from the available list if a match was found.
+    String? initialSelectedVehicle = matchingVehicle != null ? _formatVehicle(matchingVehicle) : null;
+    
+    // CRITICAL FIX: Ensure initialDriver is null if the booking is unassigned, forcing 
+    // the user to make an explicit selection ('NO_DRIVER_SELECTED'), which triggers setState
+    String? initialDriver = bookingData['driverName']?.isNotEmpty == true && 
+                            bookingData['driverName'] != 'N/A' && 
+                            bookingData['driverName'] != 'No Driver' 
+                            ? bookingData['driverName'] 
+                            : null;
+    
+    String? selectedDriverOnStart = initialDriver;
+    // Keep it null if unassigned to show hint text and require selection
+    if (selectedDriverOnStart != null && !availableDrivers.contains(selectedDriverOnStart)) {
+      selectedDriverOnStart = null; 
+    }
+
+
+    // Controllers for reasons
+    final carChangeReasonController = TextEditingController();
+    final noDriverReasonController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        // Use StatefulBuilder to manage dynamic changes in the dialog's state
+        return StatefulBuilder(
+          builder: (context, setState) {
+            String? selectedVehicle = initialSelectedVehicle; // Local state initialized with the formatted value or null
+            String? selectedDriver = selectedDriverOnStart;  // Local state for the dropdown
+
+            return AlertDialog(
+              title: const Text('Approve & Assign'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Vehicle Selection Dropdown for approver to change car
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Select a Vehicle (Change if needed)',
+                          border: OutlineInputBorder(),
+                          hintText: 'Select a vehicle',
+                          suffixIcon: Icon(Icons.directions_car_filled),
+                        ),
+                        value: selectedVehicle,
+                        items: availableVehicles.map((v) {
+                          final formatted = _formatVehicle(v);
+                          // The value for the DropdownMenuItem is the correctly formatted string
+                          return DropdownMenuItem(value: formatted, child: Text(formatted));
+                        }).toList(),
+                        onChanged: (value) => setState(() => selectedVehicle = value),
+                        validator: (value) {
+                          if (value == null) return 'Please select a vehicle.';
+                          return null;
+                        },
+                      ),
+                      
+                      const SizedBox(height: 10),
+
+                      // NEW: Car Change Reason Field (Conditional)
+                      // Compare selectedVehicle with the correctly formatted initialSelectedVehicle
+                      if (selectedVehicle != initialSelectedVehicle && selectedVehicle != null)
+                        TextFormField(
+                          controller: carChangeReasonController,
+                          decoration: const InputDecoration(
+                            labelText: 'Reason for Vehicle Change',
+                            hintText: 'e.g., Original car under maintenance',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.edit_note),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) return 'Reason for vehicle change is required.';
+                            return null;
+                          },
+                          maxLines: 2,
+                        ),
+                        
+                      if (needsDriver) ...[
+                        const SizedBox(height: 20),
+                        // Driver Selection Dropdown
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Select a Driver',
+                            border: OutlineInputBorder(),
+                            hintText: 'Select a driver or "No Driver"',
+                            suffixIcon: Icon(Icons.person_pin),
+                          ),
+                          value: selectedDriver,
+                          items: [
+                            // Driver List (Normal drivers first)
+                            ...availableDrivers.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                            // MODIFIED: Placed 'No Driver' at the bottom of the list
+                            const DropdownMenuItem(value: 'NO_DRIVER_SELECTED', child: Text('No Driver')),
+                          ],
+                          onChanged: (value) => setState(() => selectedDriver = value),
+                          validator: (value) {
+                            if (value == null) return 'Please select a driver or "No Driver".';
+                            return null;
+                          },
+                        ),
+                        
+                        // NEW: No Driver Reason Field (Conditional) - Only appears when 'No Driver' is selected.
+                        if (selectedDriver == 'NO_DRIVER_SELECTED') ...[
+                          const SizedBox(height: 10), // Space above the reason box
+                          TextFormField(
+                            controller: noDriverReasonController,
+                            decoration: const InputDecoration(
+                              labelText: 'Reason for No Driver',
+                              hintText: 'e.g., Requester will drive self',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person_off),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return 'Reason for "No Driver" is required.';
+                              return null;
+                            },
+                            maxLines: 2,
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: kApproveColor),
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      Navigator.pop(dialogContext);
+                      
+                      // MODIFIED: finalDriverName is now 'No Driver' or the actual driver name.
+                      String finalDriverName = selectedDriver == 'NO_DRIVER_SELECTED' 
+                        ? 'No Driver' 
+                        : (selectedDriver ?? 'N/A');
+                      String finalVehicleDetails = selectedVehicle ?? 'N/A Vehicle';
+                      
+                      // Build a detailed reason string for the confirmation dialog
+                      String reasonText = '';
+                      // 1. Car change reason
+                      if (selectedVehicle != initialSelectedVehicle && selectedVehicle != null) {
+                        reasonText += '\n\nVehicle Change Reason: ${carChangeReasonController.text}';
+                      }
+                      // 2. No Driver reason 
+                      if (selectedDriver == 'NO_DRIVER_SELECTED') {
+                        reasonText += '\n\nNo Driver Reason: ${noDriverReasonController.text}';
+                      }
+
+                      String baseContent = 'The booking is approved for $finalVehicleDetails. Driver assigned: $finalDriverName.';
+
+                      _showConfirmationDialog(
+                        title: 'Booking Approved',
+                        // Combine base content and reasons
+                        content: baseContent + reasonText, 
+                      );
+                    }
+                  },
+                  child: const Text('Approve Booking', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
   }
   
   Future<void> _handleCompleteBooking() async {
@@ -337,7 +500,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     // This boolean will control which UI elements are shown
     final bool isDriver = widget.userRole == 'driver';
     final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
-    final bool showCallButton = isDriver && (currentStatus == 'ASSIGNED'); // Call button only visible for 'ASSIGNED' driver trips
+    final bool showCallButton = isDriver && (currentStatus == 'ASSIGNED'); 
+    final bool showApprovalInfo = (currentStatus == 'APPROVED' || currentStatus == 'COMPLETE') && bookingData['approvedBy'] != null;
 
 
     return Scaffold(
@@ -348,7 +512,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () {
-            // This existing navigation logic is preserved
             if (widget.sourcePage == 'approval') {
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ApprovalPage()));
             } else if (widget.sourcePage == 'history') {
@@ -359,9 +522,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           },
         ),
         title: const Text('Booking Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        // The calendar icon is now conditional: it only shows if it's NOT a driver
         actions: isDriver
-            ? [] // No actions for driver
+            ? [] 
             : [
                 IconButton(
                   icon: const Icon(Icons.calendar_month_outlined, color: Colors.white),
@@ -375,7 +537,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 ),
               ],
       ),
-      // Set FAB to null since the button is now in the header card
       floatingActionButton: null, 
       
       body: SafeArea(
@@ -384,13 +545,11 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // This is the main conditional UI change for the header
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
-                  // If it's a driver, show the new date header. Otherwise, show the old status tag.
                   child: isDriver
-                      ? _buildDriverHeader(bookingData['pickupDate'], showCallButton) // Pass showCallButton status
+                      ? _buildDriverHeader(bookingData['pickupDate'], showCallButton) 
                       : _buildStatusTag(bookingData['status']),
                 ),
               ),
@@ -406,12 +565,21 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (showApprovalInfo) 
+                      _buildApprovedByInfoRow(
+                        bookingData['approvedBy'], 
+                        bookingData['approvalDateTime'],
+                      ),
+                    
                     _buildInfoRow('Booking ID', bookingData['bookingId']),
                     _buildInfoRow('Requester', bookingData['requester']),
                     _buildInfoRow('Department', bookingData['department']),
 
-                    // These rows are now conditional: only show if NOT a driver
-                    if (!isDriver) ...[
+                    // MODIFIED: Use the new editable info row for approver/requester view
+                    if (!isDriver) 
+                      _buildEditableInfoRow('Vehicle Type (Plate Number)', bookingData['model'], bookingData['plate']),
+                    
+                    if (isDriver) ...[
                       _buildInfoRow('Vehicle Type', bookingData['model']),
                       _buildInfoRow('Plate Number', bookingData['plate']),
                     ],
@@ -420,7 +588,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                     _buildInfoRow('Return Date & Time', bookingData['returnDate']),
                     _buildInfoRow('Number of Pax', bookingData['pax'].toString()),
 
-                    // This row is also conditional
                     if (!isDriver)
                       _buildInfoRow('Require Driver', (bookingData['requireDriver'] == true) ? 'Yes' : 'No'),
                     
@@ -428,7 +595,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                     _buildInfoRow('Pick-Up Location', bookingData['pickupLocation']),
                     _buildInfoRow('Return Location', bookingData['returnLocation']),
                     _buildInfoRow('Purpose of Booking', bookingData['purpose']),
-                    _buildInfoRow('Supported Document', bookingData['uploadedDocName']),
+                    
+                    _buildDownloadableInfoRow('Supported Document', bookingData['uploadedDocName']),
+                    
                     _buildInfoRow('Assigned Driver', bookingData['driverName']),
                     _buildHighlightedInfoRow('Reason for Rejection', bookingData['rejectionReason'], kRejectColor),
                   ],
@@ -438,7 +607,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
           ),
         ),
       ),
-      // The bottom navigation bar now shows different buttons based on the role
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
         child: isDriver
@@ -447,8 +615,46 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       ),
     );
   }
+  
+  // MODIFIED: Removed the Tooltip and Icon for the vehicle type
+  Widget _buildEditableInfoRow(String title, String? model, String? plate) {
+    final String modelValue = model ?? 'N/A';
+    final String plateValue = plate ?? 'N/A';
+    if (modelValue == 'N/A' && plateValue == 'N/A') return const SizedBox.shrink();
+    
+    // Combine Model and Plate for single line display
+    final String value = '$modelValue ($plateValue)';
+    
+    // The edit icon only shows for an approver/requester on a PENDING booking
+    // final bool isPendingApprover = widget.userRole != 'driver' && (bookingData['status']?.toUpperCase() == 'PENDING'); // Not needed now
 
-  // --- NEW WIDGETS FOR DRIVER VIEW ---
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF8B97A6))),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(value, style: const TextStyle(fontSize: 16, color: Color(0xFF2E3A59))),
+              // REMOVED EDIT ICON:
+              // if (isPendingApprover) 
+              //   Padding(
+              //     padding: const EdgeInsets.only(left: 8.0),
+              //     child: Tooltip( // <--- WRAPPED ICON WITH TOOLTIP
+              //       message: 'Vehicle can be changed during approval',
+              //       child: Icon(Icons.edit_note_rounded, color: kPrimaryColor, size: 20),
+              //     ),
+              //   ),
+            ],
+          ),
+          const Divider(height: 16),
+        ],
+      ),
+    );
+  }
+
 
   // New header widget for the driver's view
   Widget _buildDriverHeader(String? pickupDate, bool showCallIcon) {
@@ -481,7 +687,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
                 ),
               ),
               
-              // NEW: Row for UPCOMING tag and Phone Icon
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -509,7 +714,6 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
   
   // New action buttons for the driver's view
   Widget _buildDriverActionButtons() {
-    // Determine the status to show the correct buttons
     final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
     
     if (currentStatus == 'ASSIGNED') {
@@ -536,14 +740,8 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
               icon: const Icon(Icons.play_arrow_rounded, size: 18),
               label: const Text('Start Trip'),
               onPressed: () {
-                // MODIFIED: No longer navigate to DriTripmap page.
-                // Replace with a default action or placeholder for now.
                 // ignore: avoid_print
                 print('Start Trip action triggered, but navigation is disabled.'); 
-                // Alternatively, you can show a Snackbar or Dialog
-                // ScaffoldMessenger.of(context).showSnackBar(
-                //   const SnackBar(content: Text('Navigation feature is currently disabled.')),
-                // );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimaryColor,
@@ -574,12 +772,9 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
       );
     }
 
-    // Default to empty if status is Completed, Rejected, etc.
     return const SizedBox.shrink();
   }
   
-  // --- EXISTING WIDGETS (REFACTORED AND UNCHANGED) ---
-
   // This widget now specifically builds the buttons for the approver
   Widget _buildApproverActionButtons() {
     final String currentStatus = (bookingData['status']?.toUpperCase() ?? 'PENDING');
@@ -636,11 +831,10 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
         ),
       );
     }
-    // Return an empty box if no actions are available for the current status
     return const SizedBox.shrink();
   }
-
-  // Helper Widgets (no changes needed for these)
+  
+  // Info Row Helper (standard, used for non-editable fields)
   Widget _buildInfoRow(String title, String? value) {
     if (value == null || value == 'N/A' || value.trim().isEmpty) {
       return const SizedBox.shrink();
@@ -659,6 +853,90 @@ class _AppBookingDetailPageState extends State<AppBookingDetailPage> {
     );
   }
   
+  // NEW: Info row for Downloadable Document
+  Widget _buildDownloadableInfoRow(String title, String? docName) {
+    if (docName == null || docName == 'N/A' || docName.trim().isEmpty) {
+      return _buildInfoRow(title, 'No Document Uploaded');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF8B97A6))),
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: () => _launchDownloadUrl(docName), 
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.picture_as_pdf, color: kRejectColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  docName,
+                  style: const TextStyle(
+                    fontSize: 16, 
+                    color: kPrimaryColor, 
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.download, color: kPrimaryColor, size: 18),
+              ],
+            ),
+          ),
+          const Divider(height: 16),
+        ],
+      ),
+    );
+  }
+  
+  // Info row for Approved By
+  Widget _buildApprovedByInfoRow(String? approvedBy, String? approvalDateTime) {
+    if (approvedBy == null || approvedBy.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final String approvedText = 'Approved by: $approvedBy';
+    final String dateTimeText = 'Date/Time: ${approvalDateTime ?? 'N/A'}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: kApproveColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kApproveColor.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('APPROVAL DETAILS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: kApproveColor)),
+            const Divider(height: 12, color: Colors.transparent),
+            Row(
+              children: [
+                const Icon(Icons.person_pin, size: 18, color: kApproveColor),
+                const SizedBox(width: 8),
+                Expanded(child: Text(approvedText, style: const TextStyle(fontSize: 15, color: kApproveColor, fontWeight: FontWeight.w500))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.access_time_filled, size: 18, color: kApproveColor),
+                const SizedBox(width: 8),
+                Expanded(child: Text(dateTimeText, style: const TextStyle(fontSize: 15, color: kApproveColor, fontWeight: FontWeight.w500))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   Widget _buildHighlightedInfoRow(String title, String? value, Color textColor) {
     if (value == null || value.trim().isEmpty) {
       return const SizedBox.shrink();
