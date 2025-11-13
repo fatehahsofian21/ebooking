@@ -139,7 +139,7 @@ class _VBookingPageState extends State<VBookingPage> {
               ),
               const SizedBox(height: 12.0),
               DropdownButtonFormField<String>(
-                value: _selectedPlate,
+                initialValue: _selectedPlate,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
@@ -184,7 +184,7 @@ class _VBookingPageState extends State<VBookingPage> {
                             _ensurePaxWithinLimit();
                           });
                         },
-                        activeColor: kPrimaryColor,
+                        activeThumbColor: kPrimaryColor,
                       ),
                     ],
                   ),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:ibooking/Vbooking.dart';
 import 'package:ibooking/dashboard2.dart'; // Make sure this import is correct
-import 'package:ibooking/dashboard.dart'; // Needed for MyCalendar's home navigation
+// Needed for MyCalendar's home navigation
 
 const Color kPrimaryColor = Color(0xFF007DC5);       // PERKESO's primary blue
 const Color kPrimaryDarkColor = Color.fromARGB(255, 24, 42, 94); // Dark blue for text/headers
