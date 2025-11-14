@@ -150,7 +150,7 @@ class _AppDashState extends State<AppDash> with SingleTickerProviderStateMixin {
                   backgroundColor: Colors.white,
                   child: CircleAvatar(
                     radius: 46,
-                    backgroundImage: const AssetImage('assets/ahmad.jpg'),
+                    backgroundImage: const AssetImage('assets/profile.png'),
                   ),
                 ),
               ),
