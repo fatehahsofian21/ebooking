@@ -528,4 +528,3 @@ class _DriHistoryPageState extends State<DriHistoryPage> {
 
     return totalHeight;
   }
-}
