@@ -1139,7 +1139,7 @@ class _SuperCalendarDialogWidgetState extends State<SuperCalendarDialogWidget> {
             _buildDetailRow(Icons.person_pin_circle_outlined, 'Driver:', '${booking['driver']}'),
           _buildDetailRow(Icons.access_time, 'Time:', '${booking['time']}'),
           _buildDetailRow(Icons.comment_outlined, 'Purpose:', '${booking['purpose']}'),
-        ],
+        ], 
       ),
     );
   }
